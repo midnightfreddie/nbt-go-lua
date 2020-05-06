@@ -1,0 +1,10 @@
+### ignore extensionless files
+*
+!*.*
+!*/
+###
+
+*.exe
+*.dat
+.vscode/
+.DS_store

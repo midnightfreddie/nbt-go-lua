@@ -1,6 +1,7 @@
 package nlua
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math"
 	"testing"
@@ -29,7 +30,20 @@ func TestValueConversions(t *testing.T) {
 	for _, tag := range tags {
 		err := Nbt2Lua(tag.nbt, L)
 		if err != nil {
-			t.Error(fmt.Sprintf("foo: %s", err.Error()))
+			t.Error(fmt.Sprintf("Error processing nbt: `%s` NBT hex dump:\n%s", err.Error(), hex.Dump(tag.nbt)))
+		}
+		lNbt := L.GetGlobal("nbt")
+		if lNbtTable, ok := lNbt.(*lua.LTable); ok {
+			lTag := L.RawGet(lNbtTable, lua.LString("tagType"))
+			fmt.Println(lNbt, lTag)
+			lNbtTable.ForEach(func(k lua.LValue, v lua.LValue) {
+				fmt.Println("Key:", k)
+				if lTag, ok := v.(*lua.LTable); ok {
+					lTag.ForEach(func(k lua.LValue, v lua.LValue) {
+						fmt.Println(k, v)
+					})
+				}
+			})
 		}
 	}
 }

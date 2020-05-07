@@ -4,10 +4,10 @@ function printNbtTables(t, n)
     local s = string.rep("  ", n)
     for k,v in pairs(t) do
         if type(v) == "table" then
-            print(s, k, ":")
+            print(s..k..":")
             printNbtTables(v,n+1)
         else
-            print(s, k, v)
+            print(s..k, v)
         end
     end
 end

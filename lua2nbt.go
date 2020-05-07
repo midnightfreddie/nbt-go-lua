@@ -2,7 +2,9 @@ package nlua
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"io"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -10,9 +12,6 @@ import (
 // Lua2Nbt converts JSON byte array to uncompressed NBT byte array
 func Lua2Nbt(L *lua.LState) ([]byte, error) {
 	nbtOut := new(bytes.Buffer)
-	// var nbtJsonData NbtJson
-	// var nbtTag interface{}
-	// var nbtArray []interface{}
 	// var err error
 	nbtArray := L.GetGlobal("nbt")
 	if nbtLuaTable, ok := nbtArray.(*lua.LTable); ok {
@@ -22,10 +21,14 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 		//   nbt table produced by this package should not have non-numeric keys in nbt, so might want to ignore or error
 		nbtLuaTable.ForEach(func(k lua.LValue, v lua.LValue) {
 			fmt.Println(k)
-			// err = writeTag(nbtOut, v)
-			// if err != nil {
-			// 	return nil, err
-			// }
+			if nbtLuaTag, ok := v.(*lua.LTable); ok {
+				err := writeTag(nbtOut, nbtLuaTag, L)
+				if err != nil {
+					// FIXME: How do I propagate an error out from the anonymous function inside a loop?
+					// return nil, err
+					return
+				}
+			}
 		})
 	} else {
 		// throw error if `nbt` is not a lua table
@@ -34,46 +37,48 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 	return nbtOut.Bytes(), nil
 }
 
-/*
-func writeTag(w io.Writer, myMap interface{}) error {
+func writeTag(w io.Writer, nbtLuaTag *lua.LTable, L *lua.LState) error {
 	var err error
-	// TODO: This is panic-exiting when passed a string or null tagType instead of returning error
-	if m, ok := myMap.(map[string]interface{}); ok {
-		if tagType, ok := m["tagType"].(float64); ok {
-			if tagType == 0 {
-				// not expecting a 0 tag, but if it occurs just ignore it
-				return nil
-			}
-			err = binary.Write(w, byteOrder, byte(tagType))
-			if err != nil {
-				return JsonParseError{"Error writing tagType" + string(byte(tagType)), err}
-			}
-			if name, ok := m["name"].(string); ok {
-				err = binary.Write(w, byteOrder, int16(len(name)))
-				if err != nil {
-					return JsonParseError{"Error writing name length", err}
-				}
-				err = binary.Write(w, byteOrder, []byte(name))
-				if err != nil {
-					return JsonParseError{"Error converting name", err}
-				}
-			} else {
-				return JsonParseError{fmt.Sprintf("name field '%v' not a string", m["name"]), err}
-			}
-			err = writePayload(w, m, tagType)
-			if err != nil {
-				return err
-			}
-
-		} else {
-			return JsonParseError{fmt.Sprintf("tagType '%v' is not an integer", m["tagType"]), err}
+	var lValue lua.LValue
+	// if m, ok := myMap.(map[string]interface{}); ok {
+	lValue = nbtLuaTag.RawGet(lua.LString("tagType"))
+	if tagType, ok := lValue.(lua.LNumber); ok {
+		if tagType == 0 {
+			// not expecting a 0 tag, but if it occurs just ignore it
+			return nil
 		}
+		err = binary.Write(w, byteOrder, byte(tagType))
+		if err != nil {
+			return JsonParseError{"Error writing tagType" + string(byte(tagType)), err}
+		}
+		lValue = nbtLuaTag.RawGet(lua.LString("name"))
+		if name, ok := lValue.(lua.LString); ok {
+			err = binary.Write(w, byteOrder, int16(len(name)))
+			if err != nil {
+				return JsonParseError{"Error writing name length", err}
+			}
+			err = binary.Write(w, byteOrder, []byte(name))
+			if err != nil {
+				return JsonParseError{"Error converting name", err}
+			}
+		} else {
+			return JsonParseError{fmt.Sprintf("name field '%v' not a string", lValue), err}
+		}
+		// err = writePayload(w, m, tagType)
+		// if err != nil {
+		// 	return err
+		// }
+
 	} else {
-		return JsonParseError{"writeTag: myMap is not map[string]interface{}", err}
+		return JsonParseError{fmt.Sprintf("tagType '%v' is not an integer", lValue), err}
 	}
+	// } else {
+	// 	return JsonParseError{"writeTag: myMap is not map[string]interface{}", err}
+	// }
 	return err
 }
 
+/*
 func writePayload(w io.Writer, m map[string]interface{}, tagType float64) error {
 	var err error
 

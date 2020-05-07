@@ -45,13 +45,13 @@ func (e NbtParseError) Error() string {
 	return fmt.Sprintf("Error parsing NBT: %s%s", e.s, s)
 }
 
-// JsonParseError is when the json data does not match an expected pattern. Pass it message string and downstream error
-type JsonParseError struct {
+// LuaNbtError is when the lua nbt table data does not match an expected pattern. Pass it message string and downstream error
+type LuaNbtError struct {
 	s string
 	e error
 }
 
-func (e JsonParseError) Error() string {
+func (e LuaNbtError) Error() string {
 	var s string
 	if e.e != nil {
 		s = fmt.Sprintf(": %s", e.e.Error())

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 
@@ -42,5 +43,5 @@ func afterScripts(L *lua.LState) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(nbtOut)
+	fmt.Println(hex.Dump(nbtOut))
 }

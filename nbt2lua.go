@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"math"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -72,7 +72,6 @@ func Nbt2Lua(b []byte, L *lua.LState) error {
 // getTag broken out form Nbt2Json to allow recursion with reader but public input is []byte
 func getTag(r *bytes.Reader, L *lua.LState) (lua.LValue, error) {
 	lTable := L.NewTable()
-	// var data NbtTag
 	var tagType byte
 	err := binary.Read(r, byteOrder, &tagType)
 	if err != nil {
@@ -92,7 +91,6 @@ func getTag(r *bytes.Reader, L *lua.LState) (lua.LValue, error) {
 		if err != nil {
 			return lTable, NbtParseError{fmt.Sprintf("Reading Name - is UseJavaEncoding or UseBedrockEncoding set correctly? Name length decoded is %d", nameLen), err}
 		}
-		// data.Name = string(name[:])
 		L.RawSet(lTable, lua.LString("name"), lua.LString(string(name[:])))
 	}
 	value, err := getPayload(r, tagType, L)
@@ -101,16 +99,15 @@ func getTag(r *bytes.Reader, L *lua.LState) (lua.LValue, error) {
 	}
 	L.RawSet(lTable, lua.LString("value"), value)
 	return lTable, err
-	// return lua.LString("hi from go"), nil
 }
 
 // Gets the tag payload. Had to break this out from the main function to allow tag list recursion
 func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error) {
-	// var output interface{}
 	var err error
 	switch tagType {
 	case 0:
 		// end tag for compound; do nothing further
+		return lua.LNil, nil
 	case 1:
 		var i int8
 		err = binary.Read(r, byteOrder, &i)
@@ -118,21 +115,21 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 			return nil, NbtParseError{"Reading int8", err}
 		}
 		return lua.LNumber(i), nil
+	case 2:
+		var i int16
+		err = binary.Read(r, byteOrder, &i)
+		if err != nil {
+			return nil, NbtParseError{"Reading int16", err}
+		}
+		return lua.LNumber(i), nil
+	case 3:
+		var i int32
+		err = binary.Read(r, byteOrder, &i)
+		if err != nil {
+			return nil, NbtParseError{"Reading int32", err}
+		}
+		return lua.LNumber(i), nil
 		/*
-			case 2:
-				var i int16
-				err = binary.Read(r, byteOrder, &i)
-				if err != nil {
-					return nil, NbtParseError{"Reading int16", err}
-				}
-				output = i
-			case 3:
-				var i int32
-				err = binary.Read(r, byteOrder, &i)
-				if err != nil {
-					return nil, NbtParseError{"Reading int32", err}
-				}
-				output = i
 			case 4:
 				var i int64
 				err = binary.Read(r, byteOrder, &i)
@@ -144,24 +141,26 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 				} else {
 					output = longToIntPair(i)
 				}
-			case 5:
-				var f float32
-				err = binary.Read(r, byteOrder, &f)
-				if err != nil {
-					return nil, NbtParseError{"Reading float32", err}
-				}
-				output = f
-			case 6:
-				var f float64
-				err = binary.Read(r, byteOrder, &f)
-				if err != nil {
-					return nil, NbtParseError{"Reading float64", err}
-				}
-				if math.IsNaN(f) {
-					output = "NaN"
-				} else {
-					output = f
-				}
+		*/
+	case 5:
+		var f float32
+		err = binary.Read(r, byteOrder, &f)
+		if err != nil {
+			return nil, NbtParseError{"Reading float32", err}
+		}
+		return lua.LNumber(f), nil
+	case 6:
+		var f float64
+		err = binary.Read(r, byteOrder, &f)
+		if err != nil {
+			return nil, NbtParseError{"Reading float64", err}
+		}
+		if math.IsNaN(f) {
+			return lua.LNumber(math.NaN()), nil
+		} else {
+			return lua.LNumber(f), nil
+		}
+		/*
 			case 7:
 				var byteArray []int8
 				var oneByte int8
@@ -274,5 +273,5 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 		return nil, NbtParseError{fmt.Sprintf("TagType %d not recognized", tagType), nil}
 	}
 	// return output, nil
-	return lua.LNil, errors.New("Fell to bottom of getPayload in nbt2lua.go...this shouldn't happen")
+	// return lua.LNil, errors.New("Fell to bottom of getPayload in nbt2lua.go...this shouldn't happen")
 }

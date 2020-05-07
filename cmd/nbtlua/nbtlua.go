@@ -10,7 +10,7 @@ const memoryLimitMb = 100
 
 func luanbt() *lua.LState {
 	L := lua.NewState()
-	err := nlua.Nbt2Lua(L, []byte{1})
+	err := nlua.Nbt2Lua([]byte{1, 0, 0, 0x7f}, L)
 	if err != nil {
 		panic(err)
 	}

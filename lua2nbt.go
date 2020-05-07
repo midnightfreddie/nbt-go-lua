@@ -1,51 +1,40 @@
 package nlua
 
-/*
-// Yaml2Nbt converts JSON byte array to uncompressed NBT byte array
-func Yaml2Nbt(b []byte) ([]byte, error) {
-	myJson, err := yaml.YAMLToJSON(b)
-	if err != nil {
-		return nil, JsonParseError{"Error converting YAML to JSON", err}
-	}
-	nbtOut, err := Json2Nbt(myJson)
-	if err != nil {
-		return nbtOut, err
-	}
-	return nbtOut, nil
-}
+import (
+	"bytes"
+	"fmt"
 
-// Json2Nbt converts JSON byte array to uncompressed NBT byte array
-func Json2Nbt(b []byte) ([]byte, error) {
+	lua "github.com/yuin/gopher-lua"
+)
+
+// Lua2Nbt converts JSON byte array to uncompressed NBT byte array
+func Lua2Nbt(L *lua.LState) ([]byte, error) {
 	nbtOut := new(bytes.Buffer)
-	var nbtJsonData NbtJson
-	var nbtTag interface{}
-	var nbtArray []interface{}
-	var err error
-	err = json.Unmarshal(b, &nbtJsonData)
-	if err != nil {
-		return nil, JsonParseError{"Error parsing JSON input. Is input JSON-formatted?", err}
+	// var nbtJsonData NbtJson
+	// var nbtTag interface{}
+	// var nbtArray []interface{}
+	// var err error
+	nbtArray := L.GetGlobal("nbt")
+	if nbtLuaTable, ok := nbtArray.(*lua.LTable); ok {
+		// TODO: decide how to handle empty nbt table; for now it will return null byte array
+		//  This is not expected to be a sane situation to use this function, although it's technically correct
+		// TODO: decide how to handle non-numeric nbt table keys; for now they will process the same as numeric ones
+		//   nbt table produced by this package should not have non-numeric keys in nbt, so might want to ignore or error
+		nbtLuaTable.ForEach(func(k lua.LValue, v lua.LValue) {
+			fmt.Println(k)
+			// err = writeTag(nbtOut, v)
+			// if err != nil {
+			// 	return nil, err
+			// }
+		})
+	} else {
+		// throw error if `nbt` is not a lua table
+		return nil, JsonParseError{fmt.Sprintf("Global nbt type, expected %T, got %T", lua.LTable{}, nbtArray), nil}
 	}
-	temp, err := json.Marshal(nbtJsonData.Nbt)
-	if err != nil {
-		return nil, JsonParseError{"Error marshalling nbt: json.RawMessage", err}
-	}
-	err = json.Unmarshal(temp, &nbtArray)
-	if err != nil {
-		return nil, JsonParseError{"Error unmarshalling nbt: value", err}
-	}
-	if len(nbtArray) == 0 {
-		return nil, JsonParseError{"JSON input has no top-level value named nbt. JSON-encoded nbt data should be in an array { \"nbt\": [ <HERE> ] }", nil}
-	}
-	for _, nbtTag = range nbtArray {
-		err = writeTag(nbtOut, nbtTag)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return nbtOut.Bytes(), nil
 }
 
+/*
 func writeTag(w io.Writer, myMap interface{}) error {
 	var err error
 	// TODO: This is panic-exiting when passed a string or null tagType instead of returning error

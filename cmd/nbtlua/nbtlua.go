@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	nlua "github.com/midnightfreddie/nbt-go-lua"
@@ -24,14 +25,20 @@ func luanbt() *lua.LState {
 
 	nlua.UseJavaEncoding()
 	L := lua.NewState()
+	if memoryLimitMb > 0 {
+		L.SetMx(memoryLimitMb)
+	}
 	// err := nlua.Nbt2Lua([]byte{1, 0, 0, 0x7f}, L)
 	err = nlua.Nbt2Lua(inData, L)
 	if err != nil {
 		panic(err)
 	}
-	if memoryLimitMb > 0 {
-		L.SetMx(memoryLimitMb)
+
+	nbtOut, err := nlua.Lua2Nbt(L)
+	if err != nil {
+		panic(err)
 	}
-	// lTable, err := nlua.Nbt2LTable([]byte{1})
+	fmt.Println(nbtOut)
+
 	return L
 }

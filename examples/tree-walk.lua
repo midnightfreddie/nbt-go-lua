@@ -1,4 +1,4 @@
--- pass it a table and optinoally hierarchy number
+-- pass it a table and optionally hierarchy number
 function printNbtTables(t, n)
     -- default hierarchy n to 0 if not set
     n = n or 0

@@ -78,6 +78,7 @@ func getTag(r *bytes.Reader, L *lua.LState) (lua.LValue, error) {
 	if err != nil {
 		return lua.LNil, NbtParseError{"Reading TagType", err}
 	}
+	L.RawSet(lTable, lua.LString("tagType"), lua.LNumber(tagType))
 	// do not try to fetch name for TagType 0 which is compound end tag
 	if tagType != 0 {
 		var err error

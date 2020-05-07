@@ -57,3 +57,32 @@ nbt[#nbt+1] = {
         list = { 5, 6, 7, 8 },
     }
 }
+nbt[#nbt+1] = {
+    tagType = 10,
+    name = "compound",
+    value = {
+        {
+            tagType = 1,
+            name = "byte",
+            value = 5,
+        },
+        {
+            tagType = 2,
+            name = "short",
+            value = 5,
+        },
+        {
+            tagType = 3,
+            name = "int",
+            value = 5,
+        },
+        {
+            tagType = 4,
+            name = "long",
+            value = {
+                least = 0xffffffff,
+                most = 1,
+            },
+        },
+    }
+}

@@ -266,87 +266,92 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 		} else {
 			return LuaNbtError{fmt.Sprintf("Tag 9 List value field '%v' not an object", v), err}
 		}
-		/*
-			case 10:
-				if values, ok := v.([]interface{}); ok {
-					for _, value := range values {
-						err = writeTag(w, value)
-						if err != nil {
-							return LuaNbtError{"While writing Compound tags", err}
-						}
+	case 10:
+		if values, ok := v.(*lua.LTable); ok {
+			var forEachErr error
+			values.ForEach(func(_ lua.LValue, t lua.LValue) {
+				if tag, ok := t.(*lua.LTable); ok {
+					err = writeTag(w, tag, L)
+					if err != nil && forEachErr == nil {
+						forEachErr = LuaNbtError{"While writing Compound tags", err}
 					}
-					// write the end tag which is just a single byte 0
-					err = binary.Write(w, byteOrder, byte(0))
-					if err != nil {
-						return LuaNbtError{"Writing End tag", err}
-					}
-				} else {
-					return LuaNbtError{fmt.Sprintf("Tag 10 Compound value field '%v' not an array", v), err}
+				} else if forEachErr == nil {
+					forEachErr = LuaNbtError{fmt.Sprintf("In tag type 10, expected table but got: %v", t), nil}
 				}
+			})
+			// write the end tag which is just a single byte 0
+			err = binary.Write(w, byteOrder, byte(0))
+			if err != nil {
+				return LuaNbtError{"Writing End tag", err}
+			}
+		} else {
+			return LuaNbtError{fmt.Sprintf("Tag 10 Compound value field '%v' not an array", v), err}
+		}
+		/*
 			case 11:
-				if values, ok := v.([]interface{}); ok {
+				if values, ok := v.(*lua.LTable); ok {
 					err = binary.Write(w, byteOrder, int32(len(values)))
 					if err != nil {
 						return LuaNbtError{"Error writing int32 array length", err}
 					}
 					for _, value := range values {
 						if i, ok := value.(float64); ok {
-							if i < math.MinInt32 || i > math.MaxInt32 {
-								return LuaNbtError{fmt.Sprintf("%v is out of range for Int in tag 11 - Int Array", i), nil}
+								if i < math.MinInt32 || i > math.MaxInt32 {
+									return LuaNbtError{fmt.Sprintf("%v is out of range for Int in tag 11 - Int Array", i), nil}
+								}
+								err = binary.Write(w, byteOrder, int32(i))
+								if err != nil {
+									return LuaNbtError{"Error writing element of int32 array", err}
+								}
+							} else {
+								return LuaNbtError{fmt.Sprintf("Tag 11 Int Array element value field '%v' not an integer", value), err}
 							}
-							err = binary.Write(w, byteOrder, int32(i))
-							if err != nil {
-								return LuaNbtError{"Error writing element of int32 array", err}
-							}
-						} else {
-							return LuaNbtError{fmt.Sprintf("Tag 11 Int Array element value field '%v' not an integer", value), err}
 						}
+					} else {
+						return LuaNbtError{fmt.Sprintf("Tag Int Array value field '%v' not an array", v), err}
 					}
-				} else {
-					return LuaNbtError{fmt.Sprintf("Tag Int Array value field '%v' not an array", v), err}
-				}
-			case 12:
-				if values, ok := v.([]interface{}); ok {
-					err = binary.Write(w, byteOrder, int64(len(values)))
-					if err != nil {
-						return LuaNbtError{"Error writing int64 array length", err}
-					}
-					for _, value := range values {
-						if lValue, ok := value.(map[string]interface{}); ok {
-							var nbtLong NbtLong
-							var vl, vm float64
-							if vl, ok = lValue["valueLeast"].(float64); !ok {
-								return LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", lValue["valueLeast"]), nil}
-							}
-							nbtLong.ValueLeast = uint32(vl)
-							if vm, ok = lValue["valueMost"].(float64); !ok {
-								return LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", lValue["valueMost"]), nil}
-							}
-							nbtLong.ValueMost = uint32(vm)
-							// if i, ok := value.(float64); ok {
-							err = binary.Write(w, byteOrder, int64(intPairToLong(nbtLong)))
-							if err != nil {
-								return LuaNbtError{"Error writing element of int64 array", err}
-							}
-						} else if int64String, ok := value.(string); ok {
-							i, err := strconv.ParseInt(int64String, 10, 64)
-							if err != nil {
-								return LuaNbtError{"Error converting long array element as string payload:", err}
-							}
-							err = binary.Write(w, byteOrder, i)
-							if err != nil {
-								return LuaNbtError{"Error writing int64 array element (from string) payload", err}
-							}
-							if err != nil {
-								return LuaNbtError{fmt.Sprintf("Tag 4 Long Array element value string field '%s' not an integer", int64String), err}
-							}
-						} else {
-							return LuaNbtError{fmt.Sprintf("Tag Long Array element value field '%v' not an object", value), err}
+				case 12:
+					if values, ok := v.(*lua.LTable); ok {
+						err = binary.Write(w, byteOrder, int64(len(values)))
+						if err != nil {
+							return LuaNbtError{"Error writing int64 array length", err}
 						}
+						for _, value := range values {
+							if lValue, ok := value.(map[string]interface{}); ok {
+								var nbtLong NbtLong
+								var vl, vm float64
+								if vl, ok = lValue["valueLeast"].(float64); !ok {
+									return LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", lValue["valueLeast"]), nil}
+								}
+								nbtLong.ValueLeast = uint32(vl)
+								if vm, ok = lValue["valueMost"].(float64); !ok {
+									return LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", lValue["valueMost"]), nil}
+								}
+								nbtLong.ValueMost = uint32(vm)
+								// if i, ok := value.(float64); ok {
+								err = binary.Write(w, byteOrder, int64(intPairToLong(nbtLong)))
+								if err != nil {
+									return LuaNbtError{"Error writing element of int64 array", err}
+								}
+							} else if int64String, ok := value.(string); ok {
+								i, err := strconv.ParseInt(int64String, 10, 64)
+								if err != nil {
+									return LuaNbtError{"Error converting long array element as string payload:", err}
+								}
+								err = binary.Write(w, byteOrder, i)
+								if err != nil {
+									return LuaNbtError{"Error writing int64 array element (from string) payload", err}
+								}
+								if err != nil {
+									return LuaNbtError{fmt.Sprintf("Tag 4 Long Array element value string field '%s' not an integer", int64String), err}
+								}
+							} else {
+								return LuaNbtError{fmt.Sprintf("Tag Long Array element value field '%v' not an object", value), err}
+							}
+						}
+					} else {
+						return LuaNbtError{fmt.Sprintf("Tag 12 Long Array element value field '%v' not an array", v), err}
 					}
-				} else {
-					return LuaNbtError{fmt.Sprintf("Tag 12 Long Array element value field '%v' not an array", v), err}
-				}
 		*/
 	default:
 		return LuaNbtError{fmt.Sprintf("tagType '%v' is not recognized", tagType), err}

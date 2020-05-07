@@ -36,4 +36,16 @@ nbt[#nbt+1] = {
     name = "byteArray",
     value = { 5, 6, 7, 8 },
 }
-
+nbt[#nbt+1] = {
+    tagType = 8,
+    name = "stringName",
+    value = "stringString",
+}
+nbt[#nbt+1] = {
+    tagType = 9,
+    name = "taglist",
+    value = {
+        tagListType = 1,
+        list = { 5, 6, 7, 8 },
+    }
+}

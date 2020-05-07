@@ -56,5 +56,5 @@ func (e LuaNbtError) Error() string {
 	if e.e != nil {
 		s = fmt.Sprintf(": %s", e.e.Error())
 	}
-	return fmt.Sprintf("Error parsing json2nbt: %s%s", e.s, s)
+	return fmt.Sprintf("Error lua nbt to native nbt: %s%s", e.s, s)
 }

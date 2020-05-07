@@ -24,7 +24,7 @@ func Nbt2Lua(b []byte, L *lua.LState) error {
 	return nil
 }
 
-// getTag broken out form Nbt2Json to allow recursion with reader but public input is []byte
+// getTag broken out form Nbt2Lua to allow recursion with reader but public input is []byte
 func getTag(r *bytes.Reader, L *lua.LState) (lua.LValue, error) {
 	lTable := L.NewTable()
 	var tagType byte

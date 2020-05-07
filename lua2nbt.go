@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strconv"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -217,58 +218,68 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 		} else {
 			return LuaNbtError{fmt.Sprintf("Tag 7 Byte Array value field '%v' not a table", v), err}
 		}
-		/*
-			case 8:
-				if s, ok := v.(string); ok {
-					err = binary.Write(w, byteOrder, int16(len([]byte(s))))
-					if err != nil {
-						return LuaNbtError{"Error writing string length", err}
-					}
-					err = binary.Write(w, byteOrder, []byte(s))
-					if err != nil {
-						return LuaNbtError{"Error writing string payload", err}
-					}
-				} else {
-					return LuaNbtError{fmt.Sprintf("Tag 8 String value field '%v' not a string", v), err}
+	case 8:
+		if s, ok := v.(lua.LString); ok {
+			err = binary.Write(w, byteOrder, int16(len([]byte(s))))
+			if err != nil {
+				return LuaNbtError{"Error writing string length", err}
+			}
+			err = binary.Write(w, byteOrder, []byte(s))
+			if err != nil {
+				return LuaNbtError{"Error writing string payload", err}
+			}
+		} else {
+			return LuaNbtError{fmt.Sprintf("Tag 8 String value field '%v' not a string", v), err}
+		}
+	case 9:
+		// important: tagListType needs to be in scope to be passed to writePayload
+		// := were keeping it in a lower scope and zeroing it out.
+		var tagListType lua.LNumber
+		var lv lua.LValue
+		if lTable, ok := v.(*lua.LTable); ok {
+			lv = L.RawGet(lTable, lua.LString("tagListType"))
+			if tagListType, ok = lv.(lua.LNumber); ok {
+				err = binary.Write(w, byteOrder, byte(tagListType))
+				if err != nil {
+					return LuaNbtError{"While writing tag 9 list type", err}
 				}
-			case 9:
-				// important: tagListType needs to be in scope to be passed to writePayload
-				// := were keeping it in a lower scope and zeroing it out.
-				var tagListType float64
-				if listMap, ok := v.(map[string]interface{}); ok {
-					if tagListType, ok = listMap["tagListType"].(float64); ok {
-						err = binary.Write(w, byteOrder, byte(tagListType))
-						if err != nil {
-							return LuaNbtError{"While writing tag 9 list type", err}
-						}
+			}
+			lv = L.RawGet(lTable, lua.LString("list"))
+			if values, ok := lv.(*lua.LTable); ok {
+				err = binary.Write(w, byteOrder, int32(values.Len()))
+				if err != nil {
+					return LuaNbtError{"While writing tag 9 list size", err}
+				}
+				var forEachErr error
+				values.ForEach(func(_ lua.LValue, n lua.LValue) {
+					// for _, value := range values {
+					// fakeTag := make(map[string]interface{})
+					// fakeTag["value"] = value
+					err = writePayload(w, n, tagListType, L)
+					if err != nil && forEachErr == nil {
+						forEachErr = LuaNbtError{"While writing tag 9 list of type " + strconv.Itoa(int(tagListType)), err}
 					}
-					if values, ok := listMap["list"].([]interface{}); ok {
-						err = binary.Write(w, byteOrder, int32(len(values)))
-						if err != nil {
-							return LuaNbtError{"While writing tag 9 list size", err}
-						}
-						for _, value := range values {
-							fakeTag := make(map[string]interface{})
-							fakeTag["value"] = value
-							err = writePayload(w, fakeTag, tagListType)
-							if err != nil {
-								return LuaNbtError{"While writing tag 9 list of type " + strconv.Itoa(int(tagListType)), err}
-							}
-						}
-					} else if listMap["list"] == nil {
-						// NBT lists can be null / nil and therefore aren't represented as an array in JSON
-						err = binary.Write(w, byteOrder, int32(0))
-						if err != nil {
-							return LuaNbtError{"While writing tag 9 list null size", err}
-						}
-						return nil
-					} else {
-						return LuaNbtError{fmt.Sprintf("Tag 9 List's value field '%v' not an array or null", listMap["list"]), err}
+				})
+				if forEachErr != nil {
+					return forEachErr
+				}
+				/* TODO: I think lua nbt empty tables will work, but check
+				} else if lTable["list"] == nil {
+					// NBT lists can be null / nil and therefore aren't represented as an array in JSON
+					err = binary.Write(w, byteOrder, int32(0))
+					if err != nil {
+						return LuaNbtError{"While writing tag 9 list null size", err}
 					}
+					return nil
+				*/
+			} else {
+				return LuaNbtError{fmt.Sprintf("Tag 9 List's value field '%v' not an array or null", lv), err}
+			}
 
-				} else {
-					return LuaNbtError{fmt.Sprintf("Tag 9 List value field '%v' not an object", v), err}
-				}
+		} else {
+			return LuaNbtError{fmt.Sprintf("Tag 9 List value field '%v' not an object", v), err}
+		}
+		/*
 			case 10:
 				if values, ok := v.([]interface{}); ok {
 					for _, value := range values {

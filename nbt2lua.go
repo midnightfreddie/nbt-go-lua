@@ -9,7 +9,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// Nbt2Lua converts uncompressed NBT byte array to gopher-lua LTable
+// Nbt2Lua converts uncompressed NBT byte array to the global `nbt` variable of a github.com/yuin/gopher-lua LState
 func Nbt2Lua(b []byte, L *lua.LState) error {
 	lTable := L.NewTable()
 	buf := bytes.NewReader(b)

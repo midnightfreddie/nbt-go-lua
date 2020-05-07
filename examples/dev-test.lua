@@ -31,4 +31,9 @@ nbt[#nbt+1] = {
     name = "float64",
     value = 5,
 }
+nbt[#nbt+1] = {
+    tagType = 7,
+    name = "byteArray",
+    value = { 5, 6, 7, 8 },
+}
 

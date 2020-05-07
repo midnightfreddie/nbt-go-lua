@@ -14,6 +14,7 @@ import (
 func Lua2Nbt(L *lua.LState) ([]byte, error) {
 	nbtOut := new(bytes.Buffer)
 	nbtArray := L.GetGlobal("nbt")
+	var forEachErr error
 	if nbtLuaTable, ok := nbtArray.(*lua.LTable); ok {
 		// TODO: decide how to handle empty nbt table; for now it will return null byte array
 		//  This is not expected to be a sane situation to use this function, although it's technically correct
@@ -27,7 +28,10 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 					// FIXME: How do I propagate an error out from the anonymous function inside a loop?
 					// return nil, err
 					fmt.Println("Error in top loop:", err.Error())
-					return
+					// currently putting the first error in the function exit return
+					if forEachErr == nil {
+						forEachErr = err
+					}
 				}
 			}
 		})
@@ -35,7 +39,7 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 		// throw error if `nbt` is not a lua table
 		return nil, LuaNbtError{fmt.Sprintf("Global nbt type, expected %T, got %T", lua.LTable{}, nbtArray), nil}
 	}
-	return nbtOut.Bytes(), nil
+	return nbtOut.Bytes(), forEachErr
 }
 
 func writeTag(w io.Writer, nbtLuaTag *lua.LTable, L *lua.LState) error {
@@ -187,29 +191,33 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 				return LuaNbtError{"Error writing float64 payload", err}
 			}
 		}
-		/*
-				case 7:
-					if values, ok := v.([]interface{}); ok {
-						err = binary.Write(w, byteOrder, int32(len(values)))
-					if err != nil {
-						return LuaNbtError{"Error writing byte array length", err}
+	case 7:
+		if values, ok := v.(*lua.LTable); ok {
+			err = binary.Write(w, byteOrder, int32(values.Len()))
+			if err != nil {
+				return LuaNbtError{"Error writing byte array length", err}
+			}
+			var forEachErr error
+			values.ForEach(func(_ lua.LValue, n lua.LValue) {
+				if i, ok := n.(lua.LNumber); ok {
+					if i < math.MinInt8 || i > math.MaxInt8 && forEachErr == nil {
+						forEachErr = LuaNbtError{fmt.Sprintf("%v is out of range for Byte in tag 7 - Byte Array", i), nil}
 					}
-					for _, value := range values {
-						if i, ok := value.(float64); ok {
-							if i < math.MinInt8 || i > math.MaxInt8 {
-								return LuaNbtError{fmt.Sprintf("%v is out of range for Byte in tag 7 - Byte Array", i), nil}
-							}
-							err = binary.Write(w, byteOrder, int8(i))
-							if err != nil {
-								return LuaNbtError{"Error writing element of byte array", err}
-							}
-						} else {
-							return LuaNbtError{fmt.Sprintf("Tag 7 Byte Array element value field '%v' not an integer", v), err}
-						}
+					err = binary.Write(w, byteOrder, int8(i))
+					if err != nil && forEachErr == nil {
+						forEachErr = LuaNbtError{"Error writing element of byte array", err}
 					}
-				} else {
-					return LuaNbtError{fmt.Sprintf("Tag 7 Byte Array element value field '%v' not an array", v), err}
+				} else if forEachErr == nil {
+					forEachErr = LuaNbtError{fmt.Sprintf("Tag 7 Byte Array element value field '%v' not an integer", v), err}
 				}
+			})
+			if forEachErr != nil {
+				return LuaNbtError{"Error in byte array loop:", forEachErr}
+			}
+		} else {
+			return LuaNbtError{fmt.Sprintf("Tag 7 Byte Array value field '%v' not a table", v), err}
+		}
+		/*
 			case 8:
 				if s, ok := v.(string); ok {
 					err = binary.Write(w, byteOrder, int16(len([]byte(s))))

@@ -21,4 +21,14 @@ nbt[#nbt+1] = {
     name = "int",
     value = 5,
 }
+nbt[#nbt+1] = {
+    tagType = 5,
+    name = "float32",
+    value = 5,
+}
+nbt[#nbt+1] = {
+    tagType = 6,
+    name = "float64",
+    value = 5,
+}
 

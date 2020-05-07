@@ -121,39 +121,26 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 		} else {
 			return LuaNbtError{fmt.Sprintf("Tag 3 Int value field '%v' not an integer", v), err}
 		}
-		/*
-			case 4:
-				if int64Map, ok := v.(map[string]interface{}); ok {
-					var nbtLong NbtLong
-					var vl, vm float64
-					if vl, ok = int64Map["valueLeast"].(float64); !ok {
-						return LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", int64Map["valueLeast"]), nil}
-					}
-					nbtLong.ValueLeast = uint32(vl)
-					if vm, ok = int64Map["valueMost"].(float64); !ok {
-						return LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", int64Map["valueMost"]), nil}
-					}
-					nbtLong.ValueMost = uint32(vm)
-					err = binary.Write(w, byteOrder, int64(intPairToLong(nbtLong)))
-					if err != nil {
-						return LuaNbtError{"Error writing int64 (from uint32 pair) payload:", err}
-					}
-					} else if int64String, ok := v.(string); ok {
-						i, err := strconv.ParseInt(int64String, 10, 64)
-						if err != nil {
-							return LuaNbtError{"Error converting long as string payload:", err}
-						}
-						err = binary.Write(w, byteOrder, i)
-						if err != nil {
-							return LuaNbtError{"Error writing int64 (from string) payload:", err}
-						}
-						if err != nil {
-							return LuaNbtError{fmt.Sprintf("Tag 4 Long value string field '%s' not an integer", int64String), err}
-						}
-						} else {
-							return LuaNbtError{fmt.Sprintf("Tag 4 Long value field '%v' not an object", v), err}
-						}
-		*/
+	case 4:
+		if lValue, ok := v.(*lua.LTable); ok {
+			// var nbtLong NbtLong
+			var vl, vm lua.LNumber
+			var lv lua.LValue
+			lv = L.RawGet(lValue, lua.LString("least"))
+			if vl, ok = lv.(lua.LNumber); !ok {
+				return LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", lv), nil}
+			}
+			lv = L.RawGet(lValue, lua.LString("most"))
+			if vm, ok = lv.(lua.LNumber); !ok {
+				return LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", lv), nil}
+			}
+			err = binary.Write(w, byteOrder, int64(intPairToLong(uint32(vl), uint32(vm))))
+			if err != nil {
+				return LuaNbtError{"Error writing int64 (from uint32 pair) payload:", err}
+			}
+		} else {
+			return LuaNbtError{fmt.Sprintf("Tag 4 Long value field '%v' not an object", v), err}
+		}
 	case 5:
 		if f, ok := v.(lua.LNumber); ok {
 			// Comparing to smallest/max values is causing false errors as the nbt value comes out right even if this comparison doesn't
@@ -325,15 +312,15 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 						return LuaNbtError{"Error writing int64 array length", err}
 					}
 					for _, value := range values {
-						if int64Map, ok := value.(map[string]interface{}); ok {
+						if lValue, ok := value.(map[string]interface{}); ok {
 							var nbtLong NbtLong
 							var vl, vm float64
-							if vl, ok = int64Map["valueLeast"].(float64); !ok {
-								return LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", int64Map["valueLeast"]), nil}
+							if vl, ok = lValue["valueLeast"].(float64); !ok {
+								return LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", lValue["valueLeast"]), nil}
 							}
 							nbtLong.ValueLeast = uint32(vl)
-							if vm, ok = int64Map["valueMost"].(float64); !ok {
-								return LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", int64Map["valueMost"]), nil}
+							if vm, ok = lValue["valueMost"].(float64); !ok {
+								return LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", lValue["valueMost"]), nil}
 							}
 							nbtLong.ValueMost = uint32(vm)
 							// if i, ok := value.(float64); ok {

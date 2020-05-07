@@ -22,6 +22,14 @@ nbt[#nbt+1] = {
     value = 5,
 }
 nbt[#nbt+1] = {
+    tagType = 4,
+    name = "long",
+    value = {
+        least = 0xffffffff,
+        most = 1,
+    },
+}
+nbt[#nbt+1] = {
     tagType = 5,
     name = "float32",
     value = 5,

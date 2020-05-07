@@ -6,13 +6,13 @@ import (
 )
 
 // Version is the json document's nbt2JsonVersion:
-const Version = "0.4.0"
+const Version = "0.0.0"
 
 // Nbt2JsonUrl is inserted in the json document as nbt2JsonUrl
-const Nbt2JsonUrl = "https://github.com/midnightfreddie/nbt2json"
+const Nbt2JsonUrl = "https://github.com/midnightfreddie/nbt-go-lua"
 
 // Name is the json document's name:
-var Name = "Named Binary Tag to JSON"
+var Name = "Named Binary Tag to Lua"
 
 // Used by all converters; change with UseJavaEncoding() or UseBedrockEncoding()
 var byteOrder = binary.ByteOrder(binary.LittleEndian)

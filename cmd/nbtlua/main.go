@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime/pprof"
 
 	"github.com/chzyer/readline"
 	lua "github.com/yuin/gopher-lua"
@@ -17,11 +16,11 @@ func main() {
 }
 
 func mainAux() int {
-	var opt_e, opt_p string
+	var opt_e string
 	var opt_i, opt_v bool
 	flag.StringVar(&opt_e, "e", "", "")
 	// flag.StringVar(&opt_l, "l", "", "")
-	flag.StringVar(&opt_p, "p", "", "")
+	// flag.StringVar(&opt_p, "p", "", "")
 	flag.BoolVar(&opt_i, "i", false, "")
 	flag.BoolVar(&opt_v, "v", false, "")
 	// flag.BoolVar(&opt_dt, "dt", false, "")
@@ -31,19 +30,9 @@ func mainAux() int {
 Available options are:
   -e stat  execute string 'stat'
   -i       enter interactive mode after executing 'script'
-  -p file  write cpu profiles to the file
   -v       show version information`)
 	}
 	flag.Parse()
-	if len(opt_p) != 0 {
-		f, err := os.Create(opt_p)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
 	if len(opt_e) == 0 && !opt_i && !opt_v && flag.NArg() == 0 {
 		opt_i = true
 	}
@@ -70,29 +59,6 @@ Available options are:
 			L.RawSet(argtb, lua.LNumber(i), lua.LString(flag.Arg(i)))
 		}
 		L.SetGlobal("arg", argtb)
-		// if opt_dt || opt_dc {
-		// 	file, err := os.Open(script)
-		// 	if err != nil {
-		// 		fmt.Println(err.Error())
-		// 		return 1
-		// 	}
-		// 	chunk, err2 := parse.Parse(file, script)
-		// 	if err2 != nil {
-		// 		fmt.Println(err2.Error())
-		// 		return 1
-		// 	}
-		// 	if opt_dt {
-		// 		fmt.Println(parse.Dump(chunk))
-		// 	}
-		// 	if opt_dc {
-		// 		proto, err3 := lua.Compile(chunk, script)
-		// 		if err3 != nil {
-		// 			fmt.Println(err3.Error())
-		// 			return 1
-		// 		}
-		// 		fmt.Println(proto.String())
-		// 	}
-		// }
 		if err := L.DoFile(script); err != nil {
 			fmt.Println(err.Error())
 			status = 1

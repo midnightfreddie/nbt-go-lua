@@ -6,9 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"time"
 
-	"github.com/ghodss/yaml"
+	lua "github.com/yuin/gopher-lua"
 )
 
 // NbtJson is the top-level JSON document; it is exported for reflect, and client code shouldn't use it
@@ -55,72 +54,50 @@ func intPairToLong(nbtLong NbtLong) int64 {
 	return i
 }
 
-// Nbt2Yaml converts uncompressed NBT byte array to YAML byte array
-func Nbt2Yaml(b []byte, comment string) ([]byte, error) {
-	jsonOut, err := Nbt2Json(b, comment)
-	if err != nil {
-		return nil, err
-	}
-	yamlOut, err := yaml.JSONToYAML(jsonOut)
-	if err != nil {
-		return yamlOut, NbtParseError{"Error converting JSON to YAML. Oops. JSON conversion succeeded, so please report this error and use JSON instead.", err}
-	}
-	return yamlOut, nil
-}
-
-// Nbt2Json converts uncompressed NBT byte array to JSON byte array
-func Nbt2Json(b []byte, comment string) ([]byte, error) {
-	var nbtJson NbtJson
-	nbtJson.Name = Name
-	nbtJson.Version = Version
-	nbtJson.Nbt2JsonUrl = Nbt2JsonUrl
-	nbtJson.ConversionTime = time.Now().Format(time.RFC3339)
-	nbtJson.Comment = comment
+// Nbt2Lua converts uncompressed NBT byte array to gopher-lua LTable
+func Nbt2Lua(L *lua.LState, b []byte) error {
+	lTable := L.NewTable()
 	buf := bytes.NewReader(b)
-	// var nbtJson.nbt []*json.RawMessage
 	for buf.Len() > 0 {
 		element, err := getTag(buf)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		myTemp := json.RawMessage(element)
-		nbtJson.Nbt = append(nbtJson.Nbt, &myTemp)
+		lTable.Append(element)
 	}
-	jsonOut, err := json.MarshalIndent(nbtJson, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return jsonOut, nil
+	L.SetGlobal("nbt", lTable)
+	return nil
 }
 
 // getTag broken out form Nbt2Json to allow recursion with reader but public input is []byte
-func getTag(r *bytes.Reader) ([]byte, error) {
-	var data NbtTag
-	err := binary.Read(r, byteOrder, &data.TagType)
+func getTag(r *bytes.Reader) (lua.LValue, error) {
+	// var lTable = lua.LTable
+	// var data NbtTag
+	var tagType byte
+	err := binary.Read(r, byteOrder, &tagType)
 	if err != nil {
-		return nil, NbtParseError{"Reading TagType", err}
+		return lua.LNil, NbtParseError{"Reading TagType", err}
 	}
-	// do not try to fetch name for TagType 0 which is compound end tag
-	if data.TagType != 0 {
-		var err error
-		var nameLen int16
-		err = binary.Read(r, byteOrder, &nameLen)
-		if err != nil {
-			return nil, NbtParseError{"Reading Name length", err}
+	/*
+		// do not try to fetch name for TagType 0 which is compound end tag
+		if tagType != 0 {
+			var err error
+			var nameLen int16
+			err = binary.Read(r, byteOrder, &nameLen)
+			if err != nil {
+				return lTable, NbtParseError{"Reading Name length", err}
+			}
+			name := make([]byte, nameLen)
+			err = binary.Read(r, byteOrder, &name)
+			if err != nil {
+				return lTable, NbtParseError{fmt.Sprintf("Reading Name - is UseJavaEncoding or UseBedrockEncoding set correctly? Name length decoded is %d", nameLen), err}
+			}
+			data.Name = string(name[:])
 		}
-		name := make([]byte, nameLen)
-		err = binary.Read(r, byteOrder, &name)
-		if err != nil {
-			return nil, NbtParseError{fmt.Sprintf("Reading Name - is UseJavaEncoding or UseBedrockEncoding set correctly? Name length decoded is %d", nameLen), err}
-		}
-		data.Name = string(name[:])
-	}
-	data.Value, err = getPayload(r, data.TagType)
-	if err != nil {
-		return nil, err
-	}
-	outJson, err := json.MarshalIndent(data, "", "  ")
-	return outJson, err
+		data.Value, err = getPayload(r, tagType)
+	*/
+	// return lTable, err
+	return lua.LString("hi from go"), nil
 }
 
 // Gets the tag payload. Had to break this out from the main function to allow tag list recursion
@@ -227,29 +204,31 @@ func getPayload(r *bytes.Reader, tagType byte) (interface{}, error) {
 			tagList.List = append(tagList.List, payload)
 		}
 		output = tagList
-	case 10:
-		var compound []json.RawMessage
-		var tagType byte
-		for err = binary.Read(r, byteOrder, &tagType); tagType != 0; err = binary.Read(r, byteOrder, &tagType) {
-			if err != nil {
-				return nil, NbtParseError{"compound: reading next tag type", err}
-			}
-			_, err = r.Seek(-1, 1)
-			if err != nil {
-				return nil, NbtParseError{"seeking back one", err}
-			}
-			tag, err := getTag(r)
-			if err != nil {
-				return nil, NbtParseError{"compound: reading a child tag", err}
-			}
-			compound = append(compound, json.RawMessage(string(tag)))
-		}
-		if compound == nil {
-			// Explicitly give empty array else value will be null instead of []
-			output = []int{}
-		} else {
-			output = compound
-		}
+		/*
+			case 10:
+				var compound []json.RawMessage
+				var tagType byte
+				for err = binary.Read(r, byteOrder, &tagType); tagType != 0; err = binary.Read(r, byteOrder, &tagType) {
+					if err != nil {
+						return nil, NbtParseError{"compound: reading next tag type", err}
+					}
+					_, err = r.Seek(-1, 1)
+					if err != nil {
+						return nil, NbtParseError{"seeking back one", err}
+					}
+					tag, err := getTag(r)
+					if err != nil {
+						return nil, NbtParseError{"compound: reading a child tag", err}
+					}
+					compound = append(compound, json.RawMessage(string(tag)))
+				}
+				if compound == nil {
+					// Explicitly give empty array else value will be null instead of []
+					output = []int{}
+				} else {
+					output = compound
+				}
+		*/
 	case 11:
 		var intArray []int32
 		var numRecords, oneInt int32

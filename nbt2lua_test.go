@@ -39,16 +39,9 @@ func TestValueConversions(t *testing.T) {
 		} else {
 			lNbt := L.GetGlobal("nbt")
 			if lNbtTable, ok := lNbt.(*lua.LTable); ok {
-				// lTag := L.RawGet(lNbtTable, lua.LString("tagType"))
-				// fmt.Println(lNbt, lTag)
 				lNbtTable.ForEach(func(k lua.LValue, v lua.LValue) {
-					// fmt.Println("Key:", k)
 					if lTag, ok := v.(*lua.LTable); ok {
-						// lTag.ForEach(func(k lua.LValue, v lua.LValue) {
-						// 	fmt.Println(k, v)
-						// })
 						name := L.RawGet(lTag, lua.LString("name"))
-						// fmt.Println("Name:", name)
 						if sName, ok := name.(lua.LString); ok {
 							if sName.String() != "" {
 								t.Error(fmt.Sprintf("Name not empty string: %s", sName))

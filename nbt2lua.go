@@ -33,24 +33,16 @@ type NbtTagList struct {
 	List        []interface{} `json:"list"`
 }
 
-// NbtLong stores a 64-bit int into two 32-bit values for json portability. ValueMost are the high 32 bits and ValueLeast are the low 32 bits.
-//   using uint32s to avoid Go trying to outsmart us on "negative" int32s
-type NbtLong struct {
-	ValueLeast uint32 `json:"valueLeast"`
-	ValueMost  uint32 `json:"valueMost"`
+// Turns an int64 (nbt long) into a least-/most- significant 32 bits pair
+func longToIntPair(i int64) (least uint32, most uint32) {
+	least = uint32(i & 0xffffffff)
+	most = uint32(i >> 32)
+	return
 }
 
-// Turns an int64 (nbt long) into a valueLeast/valueMost json pair
-func longToIntPair(i int64) NbtLong {
-	var nbtLong NbtLong
-	nbtLong.ValueLeast = uint32(i & 0xffffffff)
-	nbtLong.ValueMost = uint32(i >> 32)
-	return nbtLong
-}
-
-func intPairToLong(nbtLong NbtLong) int64 {
+func intPairToLong(least uint32, most uint32) int64 {
 	var i int64
-	i = int64(nbtLong.ValueLeast) | (int64(nbtLong.ValueMost) << 32)
+	i = int64(least) | (int64(most) << 32)
 	return i
 }
 
@@ -129,19 +121,18 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 			return nil, NbtParseError{"Reading int32", err}
 		}
 		return lua.LNumber(i), nil
-		/*
-			case 4:
-				var i int64
-				err = binary.Read(r, byteOrder, &i)
-				if err != nil {
-					return nil, NbtParseError{"Reading int64", err}
-				}
-				if longAsString {
-					output = fmt.Sprintf("%d", i)
-				} else {
-					output = longToIntPair(i)
-				}
-		*/
+	case 4:
+		var i int64
+		err = binary.Read(r, byteOrder, &i)
+		if err != nil {
+			return nil, NbtParseError{"Reading int64", err}
+		}
+		least, most := longToIntPair(i)
+		lTable := L.NewTable()
+		L.RawSet(lTable, lua.LString("least"), lua.LNumber(least))
+		L.RawSet(lTable, lua.LString("most"), lua.LNumber(most))
+		return lTable, nil
+
 	case 5:
 		var f float32
 		err = binary.Read(r, byteOrder, &f)
@@ -160,113 +151,115 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 		} else {
 			return lua.LNumber(f), nil
 		}
+	case 7:
+		lByteArray := L.NewTable()
+		var oneByte int8
+		var numRecords int32
+		err := binary.Read(r, byteOrder, &numRecords)
+		if err != nil {
+			return nil, NbtParseError{"Reading byte array tag length", err}
+		}
+		for i := int32(1); i <= numRecords; i++ {
+			err = binary.Read(r, byteOrder, &oneByte)
+			if err != nil {
+				return nil, NbtParseError{"Reading byte in byte array tag", err}
+			}
+			lByteArray.Append(lua.LNumber(oneByte))
+		}
+		return lByteArray, nil
+	case 8:
+		var strLen int16
+		err := binary.Read(r, byteOrder, &strLen)
+		if err != nil {
+			return nil, NbtParseError{"Reading string tag length", err}
+		}
+		utf8String := make([]byte, strLen)
+		err = binary.Read(r, byteOrder, &utf8String)
+		if err != nil {
+			return nil, NbtParseError{"Reading string tag data", err}
+		}
+		return lua.LString(utf8String[:]), nil
+	case 9:
+		var tagListType byte
+		err = binary.Read(r, byteOrder, &tagListType)
+		if err != nil {
+			return nil, NbtParseError{"Reading TagType", err}
+		}
+		var numRecords int32
+		err := binary.Read(r, byteOrder, &numRecords)
+		if err != nil {
+			return nil, NbtParseError{"Reading list tag length", err}
+		}
+		lTagListArray := L.NewTable()
+		L.RawSet(lTagListArray, lua.LString("tagListType"), lua.LNumber(tagType))
+		for i := int32(1); i <= numRecords; i++ {
+			payload, err := getPayload(r, tagListType, L)
+			if err != nil {
+				return nil, NbtParseError{"Reading list tag item", err}
+			}
+			lTagListArray.Append(payload)
+		}
+		return lTagListArray, nil
 		/*
-			case 7:
-				var byteArray []int8
-				var oneByte int8
-				var numRecords int32
-				err := binary.Read(r, byteOrder, &numRecords)
-				if err != nil {
-					return nil, NbtParseError{"Reading byte array tag length", err}
-				}
-				for i := int32(1); i <= numRecords; i++ {
-					err = binary.Read(r, byteOrder, &oneByte)
+			case 10:
+				var compound []json.RawMessage
+				var tagType byte
+				for err = binary.Read(r, byteOrder, &tagType); tagType != 0; err = binary.Read(r, byteOrder, &tagType) {
 					if err != nil {
-						return nil, NbtParseError{"Reading byte in byte array tag", err}
+						return nil, NbtParseError{"compound: reading next tag type", err}
 					}
-					byteArray = append(byteArray, oneByte)
-				}
-				output = byteArray
-			case 8:
-				var strLen int16
-				err := binary.Read(r, byteOrder, &strLen)
-				if err != nil {
-					return nil, NbtParseError{"Reading string tag length", err}
-				}
-				utf8String := make([]byte, strLen)
-				err = binary.Read(r, byteOrder, &utf8String)
-				if err != nil {
-					return nil, NbtParseError{"Reading string tag data", err}
-				}
-				output = string(utf8String[:])
-			case 9:
-				var tagList NbtTagList
-				err = binary.Read(r, byteOrder, &tagList.TagListType)
-				if err != nil {
-					return nil, NbtParseError{"Reading TagType", err}
-				}
-				var numRecords int32
-				err := binary.Read(r, byteOrder, &numRecords)
-				if err != nil {
-					return nil, NbtParseError{"Reading list tag length", err}
-				}
-				for i := int32(1); i <= numRecords; i++ {
-					payload, err := getPayload(r, tagList.TagListType)
-					if err != nil {
-						return nil, NbtParseError{"Reading list tag item", err}
-					}
-					tagList.List = append(tagList.List, payload)
-				}
-				output = tagList
-							case 10:
-								var compound []json.RawMessage
-								var tagType byte
-								for err = binary.Read(r, byteOrder, &tagType); tagType != 0; err = binary.Read(r, byteOrder, &tagType) {
-									if err != nil {
-										return nil, NbtParseError{"compound: reading next tag type", err}
-									}
-									_, err = r.Seek(-1, 1)
-									if err != nil {
-										return nil, NbtParseError{"seeking back one", err}
-									}
-									tag, err := getTag(r, L)
-									if err != nil {
-										return nil, NbtParseError{"compound: reading a child tag", err}
-									}
-									compound = append(compound, json.RawMessage(string(tag)))
+					_, err = r.Seek(-1, 1)
+											if err != nil {
+												return nil, NbtParseError{"seeking back one", err}
+											}
+											tag, err := getTag(r, L)
+											if err != nil {
+												return nil, NbtParseError{"compound: reading a child tag", err}
+											}
+											compound = append(compound, json.RawMessage(string(tag)))
+										}
+										if compound == nil {
+											// Explicitly give empty array else value will be null instead of []
+											output = []int{}
+										} else {
+											output = compound
+										}
+							case 11:
+								var intArray []int32
+								var numRecords, oneInt int32
+								err := binary.Read(r, byteOrder, &numRecords)
+								if err != nil {
+									return nil, NbtParseError{"Reading int array tag length", err}
 								}
-								if compound == nil {
-									// Explicitly give empty array else value will be null instead of []
-									output = []int{}
+								for i := int32(1); i <= numRecords; i++ {
+									err := binary.Read(r, byteOrder, &oneInt)
+									if err != nil {
+										return nil, NbtParseError{"Reading int in int array tag", err}
+									}
+									intArray = append(intArray, oneInt)
+								}
+								output = intArray
+							case 12:
+								var longArray []NbtLong
+								var longStringArray []string
+								var numRecords, oneInt int64
+								err := binary.Read(r, byteOrder, &numRecords)
+								if err != nil {
+									return nil, NbtParseError{"Reading long array tag length", err}
+								}
+								for i := int64(1); i <= numRecords; i++ {
+									err := binary.Read(r, byteOrder, &oneInt)
+									if err != nil {
+										return nil, NbtParseError{"Reading long in long array tag", err}
+									}
+									longArray = append(longArray, longToIntPair(i))
+									longStringArray = append(longStringArray, fmt.Sprintf("%d", i))
+								}
+								if longAsString {
+									output = longStringArray
 								} else {
-									output = compound
+									output = longArray
 								}
-					case 11:
-						var intArray []int32
-						var numRecords, oneInt int32
-						err := binary.Read(r, byteOrder, &numRecords)
-						if err != nil {
-							return nil, NbtParseError{"Reading int array tag length", err}
-						}
-						for i := int32(1); i <= numRecords; i++ {
-							err := binary.Read(r, byteOrder, &oneInt)
-							if err != nil {
-								return nil, NbtParseError{"Reading int in int array tag", err}
-							}
-							intArray = append(intArray, oneInt)
-						}
-						output = intArray
-					case 12:
-						var longArray []NbtLong
-						var longStringArray []string
-						var numRecords, oneInt int64
-						err := binary.Read(r, byteOrder, &numRecords)
-						if err != nil {
-							return nil, NbtParseError{"Reading long array tag length", err}
-						}
-						for i := int64(1); i <= numRecords; i++ {
-							err := binary.Read(r, byteOrder, &oneInt)
-							if err != nil {
-								return nil, NbtParseError{"Reading long in long array tag", err}
-							}
-							longArray = append(longArray, longToIntPair(i))
-							longStringArray = append(longStringArray, fmt.Sprintf("%d", i))
-						}
-						if longAsString {
-							output = longStringArray
-						} else {
-							output = longArray
-						}
 		*/
 
 	default:

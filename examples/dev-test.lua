@@ -1,11 +1,13 @@
 -- This script is for whatever I need to test in the moment
 
-print("Hi from test script")
+-- print("Hi from test script")
 
-print(nbt[1].tagType)
+-- print(nbt[1].tagType)
 
 -- overwrite nbt for testing purposes
 nbt = {}
+
+-- create tags to test Lua2Nbt conversion
 nbt[#nbt+1] = {
     tagType = 1,
     name = "byte",
@@ -85,4 +87,9 @@ nbt[#nbt+1] = {
             },
         },
     }
+}
+nbt[#nbt+1] = {
+    tagType = 11,
+    name = "intArray",
+    value = { 5, 6, 7, 8 },
 }

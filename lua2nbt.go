@@ -19,8 +19,7 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 	if nbtLuaTable, ok := nbtArray.(*lua.LTable); ok {
 		// TODO: decide how to handle empty nbt table; for now it will return null byte array
 		//  This is not expected to be a sane situation to use this function, although it's technically correct
-		// TODO: decide how to handle non-numeric nbt table keys; for now they will process the same as numeric ones
-		//   nbt table produced by this package should not have non-numeric keys in nbt, so might want to ignore or error
+		// NOTE: non-numeric keys will be processed the same as numeric ones even though this library will never create it that way
 		nbtLuaTable.ForEach(func(k lua.LValue, v lua.LValue) {
 			fmt.Println(k)
 			if nbtLuaTag, ok := v.(*lua.LTable); ok {
@@ -37,7 +36,6 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 			}
 		})
 	} else {
-		// throw error if `nbt` is not a lua table
 		return nil, LuaNbtError{fmt.Sprintf("Global nbt type, expected %T, got %T", lua.LTable{}, nbtArray), nil}
 	}
 	return nbtOut.Bytes(), forEachErr
@@ -123,7 +121,6 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 		}
 	case 4:
 		if lValue, ok := v.(*lua.LTable); ok {
-			// var nbtLong NbtLong
 			var vl, vm lua.LNumber
 			var lv lua.LValue
 			lv = L.RawGet(lValue, lua.LString("least"))
@@ -220,7 +217,6 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 		}
 	case 9:
 		// important: tagListType needs to be in scope to be passed to writePayload
-		// := were keeping it in a lower scope and zeroing it out.
 		var tagListType lua.LNumber
 		var lv lua.LValue
 		if lTable, ok := v.(*lua.LTable); ok {
@@ -239,9 +235,6 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 				}
 				var forEachErr error
 				values.ForEach(func(_ lua.LValue, n lua.LValue) {
-					// for _, value := range values {
-					// fakeTag := make(map[string]interface{})
-					// fakeTag["value"] = value
 					err = writePayload(w, n, tagListType, L)
 					if err != nil && forEachErr == nil {
 						forEachErr = LuaNbtError{"While writing tag 9 list of type " + strconv.Itoa(int(tagListType)), err}
@@ -295,7 +288,6 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 			}
 			var forEachErr error
 			values.ForEach(func(_ lua.LValue, n lua.LValue) {
-				// for _, value := range values {
 				if i, ok := n.(lua.LNumber); ok {
 					if i < math.MinInt32 || i > math.MaxInt32 && forEachErr == nil {
 						forEachErr = LuaNbtError{fmt.Sprintf("%v is out of range for Int in tag 11 - Int Array", i), nil}
@@ -311,50 +303,39 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 		} else {
 			return LuaNbtError{fmt.Sprintf("Tag Int Array value field '%v' not an array", v), err}
 		}
-	/*
-		case 12:
-			if values, ok := v.(*lua.LTable); ok {
-				err = binary.Write(w, byteOrder, int64(len(values)))
-				if err != nil {
-					return LuaNbtError{"Error writing int64 array length", err}
-				}
-				for _, value := range values {
-					if lValue, ok := value.(map[string]interface{}); ok {
-							var nbtLong NbtLong
-							var vl, vm float64
-							if vl, ok = lValue["valueLeast"].(float64); !ok {
-								return LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", lValue["valueLeast"]), nil}
-							}
-							nbtLong.ValueLeast = uint32(vl)
-							if vm, ok = lValue["valueMost"].(float64); !ok {
-								return LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", lValue["valueMost"]), nil}
-							}
-							nbtLong.ValueMost = uint32(vm)
-							// if i, ok := value.(float64); ok {
-							err = binary.Write(w, byteOrder, int64(intPairToLong(nbtLong)))
-							if err != nil {
-								return LuaNbtError{"Error writing element of int64 array", err}
-							}
-						} else if int64String, ok := value.(string); ok {
-							i, err := strconv.ParseInt(int64String, 10, 64)
-							if err != nil {
-								return LuaNbtError{"Error converting long array element as string payload:", err}
-							}
-							err = binary.Write(w, byteOrder, i)
-							if err != nil {
-								return LuaNbtError{"Error writing int64 array element (from string) payload", err}
-							}
-							if err != nil {
-								return LuaNbtError{fmt.Sprintf("Tag 4 Long Array element value string field '%s' not an integer", int64String), err}
-							}
-						} else {
-							return LuaNbtError{fmt.Sprintf("Tag Long Array element value field '%v' not an object", value), err}
-						}
+	case 12:
+		if values, ok := v.(*lua.LTable); ok {
+			err = binary.Write(w, byteOrder, int64(values.Len()))
+			if err != nil {
+				return LuaNbtError{"Error writing int64 array length", err}
+			}
+			var forEachErr error
+			values.ForEach(func(_ lua.LValue, n lua.LValue) {
+				if li, ok := n.(*lua.LTable); ok {
+					var vl, vm lua.LNumber
+					var lv lua.LValue
+					lv = L.RawGet(li, lua.LString("least"))
+					if vl, ok = lv.(lua.LNumber); !ok && forEachErr == nil {
+						forEachErr = LuaNbtError{fmt.Sprintf("Error reading valueLeast of '%v'", lv), nil}
+					}
+					lv = L.RawGet(li, lua.LString("most"))
+					if vm, ok = lv.(lua.LNumber); !ok && forEachErr == nil {
+						forEachErr = LuaNbtError{fmt.Sprintf("Error reading valueMost of '%v'", lv), nil}
+					}
+					err = binary.Write(w, byteOrder, int64(intPairToLong(uint32(vl), uint32(vm))))
+					if err != nil && forEachErr == nil {
+						forEachErr = LuaNbtError{"Error writing int64 (from uint32 pair) payload:", err}
 					}
 				} else {
-					return LuaNbtError{fmt.Sprintf("Tag 12 Long Array element value field '%v' not an array", v), err}
+					forEachErr = LuaNbtError{fmt.Sprintf("Tag 4 Long value element field '%v' not a table", v), err}
 				}
-	*/
+			})
+			if forEachErr != nil {
+				return forEachErr
+			}
+		} else {
+			return LuaNbtError{fmt.Sprintf("Tag 12 Long Array element value field '%v' not an array", v), err}
+		}
 	default:
 		return LuaNbtError{fmt.Sprintf("tagType '%v' is not recognized", tagType), err}
 	}

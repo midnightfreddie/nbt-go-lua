@@ -9,6 +9,10 @@ nbt = {}
 
 -- create tags to test Lua2Nbt conversion
 nbt[#nbt+1] = {
+    tagType = 0,
+    name = "endTag",
+    value = "This tag should be ignored as it is meaningless and shouldn't be in the lua representation",
+}nbt[#nbt+1] = {
     tagType = 1,
     name = "byte",
     value = 5,
@@ -92,4 +96,23 @@ nbt[#nbt+1] = {
     tagType = 11,
     name = "intArray",
     value = { 5, 6, 7, 8 },
+}
+nbt[#nbt+1] = {
+    tagType = 12,
+    name = "longArray",
+    value = {
+        {
+            least = 0xffffffff,
+            most = 1,
+        },
+        {
+            least = 0xffffffff,
+            most = 0x7fffffff,
+        },
+        {
+            least = 0,
+            most = 0x80000000,
+        },
+
+    },
 }

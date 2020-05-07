@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io/ioutil"
+
 	nlua "github.com/midnightfreddie/nbt-go-lua"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -9,8 +11,21 @@ import (
 const memoryLimitMb = 100
 
 func luanbt() *lua.LState {
+
+	////////// temp hard-coded file
+	var inData []byte
+	var err error
+
+	inData, err = ioutil.ReadFile(`player.dat`)
+	if err != nil {
+		panic(err)
+	}
+	////////////////////
+
+	nlua.UseJavaEncoding()
 	L := lua.NewState()
-	err := nlua.Nbt2Lua([]byte{1, 0, 0, 0x7f}, L)
+	// err := nlua.Nbt2Lua([]byte{1, 0, 0, 0x7f}, L)
+	err = nlua.Nbt2Lua(inData, L)
 	if err != nil {
 		panic(err)
 	}

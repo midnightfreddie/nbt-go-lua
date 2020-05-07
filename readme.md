@@ -11,6 +11,13 @@ An attempt to expose NBT to a lua environment as a table for user scripting.
 
 - Ready to try to read real NBT data, but there's no convenient way to do it yet
 
+## Format of `nbt`
+
+- lua's global `nbt` is a table `{}` in which each top-level nbt tag is
+- in many cases there is only one top-level nbt tag, so `nbt[1]` is that tag
+- All tags (except tag 0 / end) are added as tables, and they have a `tagType` and `value`, and many have a `name`
+- Compound and list tags' values are again tables of the values beginning with `[1]`
+
 ## Vision
 
 - The Go code will make the nbt easily accessible from lua

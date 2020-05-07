@@ -75,6 +75,9 @@ Available options are:
 	if opt_i {
 		doREPL(L)
 	}
+
+	afterScripts(L)
+
 	return status
 }
 

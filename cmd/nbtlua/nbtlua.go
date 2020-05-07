@@ -34,11 +34,13 @@ func luanbt() *lua.LState {
 		panic(err)
 	}
 
+	return L
+}
+
+func afterScripts(L *lua.LState) {
 	nbtOut, err := nlua.Lua2Nbt(L)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(nbtOut)
-
-	return L
 }

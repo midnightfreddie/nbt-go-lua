@@ -1,16 +1,6 @@
 package nlua
 
-import (
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
-	"fmt"
-	"io"
-	"math"
-
-	"github.com/ghodss/yaml"
-)
-
+/*
 // Yaml2Nbt converts JSON byte array to uncompressed NBT byte array
 func Yaml2Nbt(b []byte) ([]byte, error) {
 	myJson, err := yaml.YAMLToJSON(b)
@@ -356,9 +346,9 @@ func writePayload(w io.Writer, m map[string]interface{}, tagType float64) error 
 				} else {
 					return JsonParseError{fmt.Sprintf("Tag 12 Long Array element value field '%v' not an array", m["value"]), err}
 				}
-		*/
-	default:
-		return JsonParseError{fmt.Sprintf("tagType '%v' is not recognized", tagType), err}
-	}
-	return err
-}
+			default:
+				return JsonParseError{fmt.Sprintf("tagType '%v' is not recognized", tagType), err}
+			}
+			return err
+		}
+*/

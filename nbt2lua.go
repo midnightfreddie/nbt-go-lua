@@ -3,13 +3,13 @@ package nlua
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"math"
 
 	lua "github.com/yuin/gopher-lua"
 )
 
+/*
 // NbtJson is the top-level JSON document; it is exported for reflect, and client code shouldn't use it
 type NbtJson struct {
 	Name           string             `json:"name"`
@@ -32,7 +32,7 @@ type NbtTagList struct {
 	TagListType byte          `json:"tagListType"`
 	List        []interface{} `json:"list"`
 }
-
+*/
 // Turns an int64 (nbt long) into a least-/most- significant 32 bits pair
 func longToIntPair(i int64) (least uint32, most uint32) {
 	least = uint32(i & 0xffffffff)
@@ -200,71 +200,61 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 			lTagListArray.Append(payload)
 		}
 		return lTagListArray, nil
-		/*
-			case 10:
-				var compound []json.RawMessage
-				var tagType byte
-				for err = binary.Read(r, byteOrder, &tagType); tagType != 0; err = binary.Read(r, byteOrder, &tagType) {
-					if err != nil {
-						return nil, NbtParseError{"compound: reading next tag type", err}
-					}
-					_, err = r.Seek(-1, 1)
-											if err != nil {
-												return nil, NbtParseError{"seeking back one", err}
-											}
-											tag, err := getTag(r, L)
-											if err != nil {
-												return nil, NbtParseError{"compound: reading a child tag", err}
-											}
-											compound = append(compound, json.RawMessage(string(tag)))
-										}
-										if compound == nil {
-											// Explicitly give empty array else value will be null instead of []
-											output = []int{}
-										} else {
-											output = compound
-										}
-							case 11:
-								var intArray []int32
-								var numRecords, oneInt int32
-								err := binary.Read(r, byteOrder, &numRecords)
-								if err != nil {
-									return nil, NbtParseError{"Reading int array tag length", err}
-								}
-								for i := int32(1); i <= numRecords; i++ {
-									err := binary.Read(r, byteOrder, &oneInt)
-									if err != nil {
-										return nil, NbtParseError{"Reading int in int array tag", err}
-									}
-									intArray = append(intArray, oneInt)
-								}
-								output = intArray
-							case 12:
-								var longArray []NbtLong
-								var longStringArray []string
-								var numRecords, oneInt int64
-								err := binary.Read(r, byteOrder, &numRecords)
-								if err != nil {
-									return nil, NbtParseError{"Reading long array tag length", err}
-								}
-								for i := int64(1); i <= numRecords; i++ {
-									err := binary.Read(r, byteOrder, &oneInt)
-									if err != nil {
-										return nil, NbtParseError{"Reading long in long array tag", err}
-									}
-									longArray = append(longArray, longToIntPair(i))
-									longStringArray = append(longStringArray, fmt.Sprintf("%d", i))
-								}
-								if longAsString {
-									output = longStringArray
-								} else {
-									output = longArray
-								}
-		*/
+	case 10:
+		compound := L.NewTable()
+		var tagType byte
+		for err = binary.Read(r, byteOrder, &tagType); tagType != 0; err = binary.Read(r, byteOrder, &tagType) {
+			if err != nil {
+				return nil, NbtParseError{"compound: reading next tag type", err}
+			}
+			_, err = r.Seek(-1, 1)
+			if err != nil {
+				return nil, NbtParseError{"seeking back one", err}
+			}
+			tag, err := getTag(r, L)
+			if err != nil {
+				return nil, NbtParseError{"compound: reading a child tag", err}
+			}
+			compound.Append(tag)
+		}
+		return compound, nil
+	case 11:
+		intArray := L.NewTable()
+		var numRecords, oneInt int32
+		err := binary.Read(r, byteOrder, &numRecords)
+		if err != nil {
+			return nil, NbtParseError{"Reading int array tag length", err}
+		}
+		for i := int32(1); i <= numRecords; i++ {
+			err := binary.Read(r, byteOrder, &oneInt)
+			if err != nil {
+				return nil, NbtParseError{"Reading int in int array tag", err}
+			}
+			intArray.Append(lua.LNumber(oneInt))
+		}
+		return intArray, nil
+	case 12:
+		longArray := L.NewTable()
+		var numRecords, oneInt int64
+		err := binary.Read(r, byteOrder, &numRecords)
+		if err != nil {
+			return nil, NbtParseError{"Reading long array tag length", err}
+		}
+		for i := int64(1); i <= numRecords; i++ {
+			err := binary.Read(r, byteOrder, &oneInt)
+			if err != nil {
+				return nil, NbtParseError{"Reading long in long array tag", err}
+			}
+			least, most := longToIntPair(i)
+			lTable := L.NewTable()
+			L.RawSet(lTable, lua.LString("least"), lua.LNumber(least))
+			L.RawSet(lTable, lua.LString("most"), lua.LNumber(most))
+			longArray.Append(lTable)
+
+		}
+		return longArray, nil
 
 	default:
 		return nil, NbtParseError{fmt.Sprintf("TagType %d not recognized", tagType), nil}
 	}
-	// return output, nil
-	// return lua.LNil, errors.New("Fell to bottom of getPayload in nbt2lua.go...this shouldn't happen")
 }

@@ -13,15 +13,21 @@ func TestValueConversions(t *testing.T) {
 
 	numberTags := []struct {
 		tagType lua.LNumber
-		value   lua.LValue
+		value   lua.LNumber
 		nbt     []byte
 	}{
-		{1, lua.LNumber(math.MaxInt8), []byte{1, 0, 0, 0x7f}},
-		{1, lua.LNumber(math.MinInt8), []byte{1, 0, 0, 0x80}},
-		{2, lua.LNumber(math.MaxInt16), []byte{2, 0, 0, 0xff, 0x7f}},
-		{2, lua.LNumber(math.MinInt16), []byte{2, 0, 0, 0x00, 0x80}},
-		{3, lua.LNumber(math.MaxInt32), []byte{3, 0, 0, 0xff, 0xff, 0xff, 0x7f}},
-		{3, lua.LNumber(math.MinInt32), []byte{3, 0, 0, 0x00, 0x00, 0x00, 0x80}},
+		{1, math.MaxInt8, []byte{1, 0, 0, 0x7f}},
+		{1, math.MinInt8, []byte{1, 0, 0, 0x80}},
+		{2, math.MaxInt16, []byte{2, 0, 0, 0xff, 0x7f}},
+		{2, math.MinInt16, []byte{2, 0, 0, 0x00, 0x80}},
+		{3, math.MaxInt32, []byte{3, 0, 0, 0xff, 0xff, 0xff, 0x7f}},
+		{3, math.MinInt32, []byte{3, 0, 0, 0x00, 0x00, 0x00, 0x80}},
+		{5, 0, []byte{5, 0, 0, 0x00, 0x00, 0x00, 0x00}},
+		{5, math.MaxFloat32, []byte{5, 0, 0, 0xff, 0xff, 0x7f, 0x7f}},
+		{5, math.SmallestNonzeroFloat32, []byte{5, 0, 0, 0x01, 0x00, 0x00, 0x00}},
+		{6, 0, []byte{6, 0, 0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		{6, math.MaxFloat64, []byte{6, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f}},
+		{6, math.SmallestNonzeroFloat64, []byte{6, 0, 0, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 	}
 
 	UseBedrockEncoding()
@@ -60,7 +66,7 @@ func TestValueConversions(t *testing.T) {
 						}
 						value := L.RawGet(lTag, lua.LString("value"))
 						if valueTyped, ok := value.(lua.LNumber); ok {
-							if value != tag.value {
+							if valueTyped != tag.value {
 								t.Error(fmt.Sprintf("Value expected %v, got %v", tag.value, valueTyped))
 							}
 						} else {

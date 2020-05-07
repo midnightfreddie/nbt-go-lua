@@ -9,43 +9,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-/*
-// NbtJson is the top-level JSON document; it is exported for reflect, and client code shouldn't use it
-type NbtJson struct {
-	Name           string             `json:"name"`
-	Version        string             `json:"version"`
-	Nbt2JsonUrl    string             `json:"nbt2JsonUrl"`
-	ConversionTime string             `json:"conversionTime,omitempty"`
-	Comment        string             `json:"comment,omitempty"`
-	Nbt            []*json.RawMessage `json:"nbt"`
-}
-
-// NbtTag represents one NBT tag for each struct; it is exported for reflect, and client code shouldn't use it
-type NbtTag struct {
-	TagType byte        `json:"tagType"`
-	Name    string      `json:"name"`
-	Value   interface{} `json:"value,omitempty"`
-}
-
-// NbtTagList represents an NBT tag list; it is exported for reflect, and client code shouldn't use it
-type NbtTagList struct {
-	TagListType byte          `json:"tagListType"`
-	List        []interface{} `json:"list"`
-}
-*/
-// Turns an int64 (nbt long) into a least-/most- significant 32 bits pair
-func longToIntPair(i int64) (least uint32, most uint32) {
-	least = uint32(i & 0xffffffff)
-	most = uint32(i >> 32)
-	return
-}
-
-func intPairToLong(least uint32, most uint32) int64 {
-	var i int64
-	i = int64(least) | (int64(most) << 32)
-	return i
-}
-
 // Nbt2Lua converts uncompressed NBT byte array to gopher-lua LTable
 func Nbt2Lua(b []byte, L *lua.LState) error {
 	lTable := L.NewTable()

@@ -9,7 +9,8 @@ An attempt to expose NBT to a lua environment as a table for user scripting.
 
 ## Status
 
-- Ready to try to read real NBT data, but there's no convenient way to do it yet
+- Successfully reading real NBT data, but currently from a hard-coded file location
+- examples/tree-walk.lua works! `nbtlua tree-walk` works if you have an uncompressed nbt file named "player.dat" in the local directory
 
 ## Format of `nbt`
 

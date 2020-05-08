@@ -26,7 +26,6 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 				if err != nil {
 					// FIXME: How do I propagate an error out from the anonymous function inside a loop?
 					// return nil, err
-					fmt.Println("Error in top loop:", err.Error())
 					// currently putting the first error in the function exit return
 					if forEachErr == nil {
 						forEachErr = err

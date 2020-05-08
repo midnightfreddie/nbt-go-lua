@@ -153,8 +153,10 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 		if err != nil {
 			return nil, NbtParseError{"Reading list tag length", err}
 		}
+		lTagListTable := L.NewTable()
+		L.RawSet(lTagListTable, lua.LString("tagListType"), lua.LNumber(tagListType))
 		lTagListArray := L.NewTable()
-		L.RawSet(lTagListArray, lua.LString("tagListType"), lua.LNumber(tagType))
+		L.RawSet(lTagListTable, lua.LString("list"), lTagListArray)
 		for i := int32(1); i <= numRecords; i++ {
 			payload, err := getPayload(r, tagListType, L)
 			if err != nil {
@@ -162,7 +164,7 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 			}
 			lTagListArray.Append(payload)
 		}
-		return lTagListArray, nil
+		return lTagListTable, nil
 	case 10:
 		compound := L.NewTable()
 		var tagType byte

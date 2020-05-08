@@ -20,8 +20,7 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 		// TODO: decide how to handle empty nbt table; for now it will return null byte array
 		//  This is not expected to be a sane situation to use this function, although it's technically correct
 		// NOTE: non-numeric keys will be processed the same as numeric ones even though this library will never create it that way
-		nbtLuaTable.ForEach(func(k lua.LValue, v lua.LValue) {
-			fmt.Println(k)
+		nbtLuaTable.ForEach(func(_ lua.LValue, v lua.LValue) {
 			if nbtLuaTag, ok := v.(*lua.LTable); ok {
 				err := writeTag(nbtOut, nbtLuaTag, L)
 				if err != nil {

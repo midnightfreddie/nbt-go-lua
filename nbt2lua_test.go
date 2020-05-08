@@ -36,6 +36,7 @@ func TestNbt2Lua(t *testing.T) {
 
 	UseBedrockEncoding()
 	L := lua.NewState()
+	defer L.Close()
 	for _, tag := range numberTags {
 		err := Nbt2Lua(tag.nbt, L)
 		if err != nil {
@@ -78,11 +79,14 @@ func TestNbt2Lua(t *testing.T) {
 
 func TestLua2Nbt(t *testing.T) {
 	L := lua.NewState()
+	defer L.Close()
 	var bedrockSig, javaSig []byte
 	// get filename of current file; will use relative path from here for test data input
 	_, filename, _, _ := runtime.Caller(0)
 	luaFile := filepath.Dir(filename) + "/test_data/testnbt.lua"
-	L.DoFile(luaFile)
+	if err := L.DoFile(luaFile); err != nil {
+		t.Fatal("Error running lua script: ", err)
+	}
 
 	// read sha1bedrock sig from lua
 	lv := L.GetGlobal("sha1bedrock")
@@ -120,13 +124,14 @@ func TestLua2Nbt(t *testing.T) {
 	if !bytes.Equal(s[:], bedrockSig) {
 		t.Errorf("bedrock signature expected %v, got %v", bedrockSig, s)
 	}
-}
 
-func TestPrintThis(t *testing.T) {
-	foo := sha1.Sum([]byte("Testlksdvlseflsefvlsfnlsvslslgslsldvnsivnsinvsin"))
-	fmt.Printf("0x%x\n", foo[0:4])
-	fmt.Printf("0x%x\n", foo[4:8])
-	fmt.Printf("0x%x\n", foo[8:12])
-	fmt.Printf("0x%x\n", foo[12:16])
-	fmt.Printf("0x%x\n", foo[16:20])
+	UseJavaEncoding()
+	nbtOut, err = Lua2Nbt(L)
+	if err != nil {
+		t.Error("Java conversion: ", err)
+	}
+	s = sha1.Sum(nbtOut)
+	if !bytes.Equal(s[:], javaSig) {
+		t.Errorf("Java signature expected %v, got %v", javaSig, s)
+	}
 }

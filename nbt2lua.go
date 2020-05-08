@@ -210,7 +210,7 @@ func getPayload(r *bytes.Reader, tagType byte, L *lua.LState) (lua.LValue, error
 			if err != nil {
 				return nil, NbtParseError{"Reading long in long array tag", err}
 			}
-			least, most := longToIntPair(i)
+			least, most := longToIntPair(oneInt)
 			lTable := L.NewTable()
 			L.RawSet(lTable, lua.LString("least"), lua.LNumber(least))
 			L.RawSet(lTable, lua.LString("most"), lua.LNumber(most))

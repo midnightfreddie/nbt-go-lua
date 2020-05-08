@@ -128,6 +128,11 @@ func TestLua2Nbt(t *testing.T) {
 
 	// Round trip check
 	if err := Nbt2Lua(nbtOut, L); err == nil {
+		// TODO: remove this dofile, it's temporary
+		if err := L.DoFile(filepath.Dir(filename) + "/examples/tree-walk.lua"); err != nil {
+			t.Fatal("Error running lua script: ", err)
+		}
+
 		if nbtOut, err = Lua2Nbt(L); err == nil {
 			s := sha1.Sum(nbtOut)
 			if !bytes.Equal(s[:], bedrockSig) {

@@ -35,6 +35,7 @@ func Lua2Nbt(L *lua.LState) ([]byte, error) {
 	return nbtOut.Bytes(), forEachErr
 }
 
+// called by Lua2Nbt for each LTable representing an nbt tag; also called from writePayload for compound tags
 func writeTag(w io.Writer, nbtLuaTag *lua.LTable, L *lua.LState) error {
 	var err error
 	var lValue lua.LValue
@@ -73,6 +74,7 @@ func writeTag(w io.Writer, nbtLuaTag *lua.LTable, L *lua.LState) error {
 	return err
 }
 
+// called by writeTag to return the value (v) field for the given tag type
 func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState) error {
 	var err error
 

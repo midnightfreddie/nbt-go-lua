@@ -24,7 +24,7 @@ func Nbt2Lua(b []byte, L *lua.LState) error {
 	return nil
 }
 
-// getTag broken out form Nbt2Lua to allow recursion with reader but public input is []byte
+// called by Nbt2Lua for each nbt tag; also called from getPayload for compound tags
 func getTag(r *bytes.Reader, L *lua.LState) (lua.LValue, error) {
 	lTable := L.NewTable()
 	var tagType byte

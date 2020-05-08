@@ -1,22 +1,16 @@
-An attempt to expose NBT to a lua environment as a table for user scripting.
+This repo is a Go module/pakage to make NBT (named binary tags) readable and editable in a Lua script environment.
 
-## Work in progress
+## Work in progress / status
 
-- cmd/nbtlua and/or nbt2lua_test.go are creating a gopher-lua state (Lua v5.1) and calling Nbt2Lua with a hard-coded NBT byte array
-- Nbt2Lua is creating `nbt` table in lua's global namespace
-- cmd/nbtlua currently provides interactive readline and ability to run lua from an argument or a file to read `nbt`
-- nbt2lua_test.go is testing tags 1, 2, 3, 5, and 6 for accurate conversion
-
-## Status
-
-- Successfully reading real NBT data, but currently from a hard-coded file location
-- examples/tree-walk.lua works! `nbtlua tree-walk.lua` works if you have an uncompressed nbt file named "player.dat" in the local directory
+- The Go module is working and successfully decoding/encoding NBT (named binary tags, mostly used in Minecraft) into a Lua 5.1 environment in the global `nbt` variable
+- Lua scripts in examples and test_data can give you an idea of how to access or modify it
+- The cmd/nbtlua executable is not really in a distributable state yet; I've been hard coding things while getting the nlua package finished
 
 ## Format of `nbt`
 
 - lua's global `nbt` is a table `{}` in which each top-level nbt tag is
-- in many cases there is only one top-level nbt tag, so `nbt[1]` is that tag
-- All tags (except tag 0 / end) are added as tables, and they have a `tagType` and `value`, and many have a `name`
+- in many cases there is only one top-level nbt compound tag, so `nbt[1]` is that tag, and `nbt[1][1]`, `nbt[1][2]`... are the first-tier tags you're looking for. Try `nbt[1][1].name` or the equivalent `nbt[1][1]["name"]`
+- All tags (except tag 0 / end) are added as tables, and they have a `tagType`, `value`, and `name`
 - Compound and list tags' values are again tables of the values beginning with `[1]`
 
 ## Vision
@@ -29,3 +23,14 @@ An attempt to expose NBT to a lua environment as a table for user scripting.
 - The `"github.com/midnightfreddie/nbt-go-lua"` module will be kept simple and only decode/encode between nbt and lua
 - Lua scripts and other projects can add more complex features
 - cmd/nbtlua will eventually read and write optionally-compressed nbt files and handle the file reads & writes
+
+## Go code example
+
+See examples/go-example.go for how to use the package
+
+### Go exported functions
+
+- `func Nbt2Lua(b []byte, L *lua.LState) error` - pass it an uncompressed nbt byte array and the gopher-lua state variable, and it will populate the `nbt` global variable in Lua with a table hierarchy representing the nbt data
+- `func Lua2Nbt(L *lua.LState) ([]byte, error)` - pass it the gopher-lua state variable, and it will convert the `nbt` global variable into an nbt byte array and return it
+- `func UseBedrockEncoding()` - This makes any future conversions read/write the nbt usable by Minecraft Bedrock Edition (little endian). This is the default state when the package is loaded.
+- `func UseJavaEncoding()` - This makes any future conversions read/write the nbt usable by Minecraft Java Edition (big endian)

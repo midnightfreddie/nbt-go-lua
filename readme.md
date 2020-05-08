@@ -4,7 +4,7 @@ This repo is a Go module/pakage to make NBT (named binary tags) readable and edi
 
 - The Go module is working and successfully decoding/encoding NBT (named binary tags, mostly used in Minecraft) into a Lua 5.1 environment in the global `nbt` variable
 - Lua scripts in examples and test_data can give you an idea of how to access or modify it
-- The cmd/nbtlua executable is not really in a distributable state yet; I've been hard coding things while getting the nlua package finished
+- The cmd/nbtlua executable doesn't do much yet. It loads a hard-coded sample nbt tag into the global `nbt` lua variable, and then prints a hex dump on exit of the output nbt. You can interactively use lua or provide a lua script file path on the command line to run the script. See `nbtlua -h` for switches. I'll be working on improving the features of the executable now that the package code seems to be working well.
 
 ## Format of `nbt`
 
@@ -20,7 +20,7 @@ This repo is a Go module/pakage to make NBT (named binary tags) readable and edi
 - Lua code will read and/or alter the data
 - Go code will write the modified NBT to a file
 - The library will be accessible for other Go projects, like my [MCPE Tool](https://github.com/midnightfreddie/McpeTool)
-- The `"github.com/midnightfreddie/nbt-go-lua"` module will be kept simple and only decode/encode between nbt and lua
+- The `"github.com/midnightfreddie/nbt-go-lua"` package will be kept simple and only decode/encode between nbt and lua
 - Lua scripts and other projects can add more complex features
 - cmd/nbtlua will eventually read and write optionally-compressed nbt files and handle the file reads & writes
 

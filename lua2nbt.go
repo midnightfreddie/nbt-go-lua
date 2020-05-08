@@ -12,21 +12,17 @@ import (
 )
 
 // Lua2Nbt converts lua's global nbt table variable to uncompressed NBT byte array
+//   Note: arrays/lists will iterate all keys in the table, even non-numeric even though Nbt2Lua will not make those
+//   Note: A nil lua nbt will return an error, but an nbt empty table will return an empty byte array
 func Lua2Nbt(L *lua.LState) ([]byte, error) {
 	nbtOut := new(bytes.Buffer)
 	nbtArray := L.GetGlobal("nbt")
 	var forEachErr error
 	if nbtLuaTable, ok := nbtArray.(*lua.LTable); ok {
-		// TODO: decide how to handle empty nbt table; for now it will return null byte array
-		//  This is not expected to be a sane situation to use this function, although it's technically correct
-		// NOTE: non-numeric keys will be processed the same as numeric ones even though this library will never create it that way
 		nbtLuaTable.ForEach(func(_ lua.LValue, v lua.LValue) {
 			if nbtLuaTag, ok := v.(*lua.LTable); ok {
 				err := writeTag(nbtOut, nbtLuaTag, L)
 				if err != nil {
-					// FIXME: How do I propagate an error out from the anonymous function inside a loop?
-					// return nil, err
-					// currently putting the first error in the function exit return
 					if forEachErr == nil {
 						forEachErr = err
 					}
@@ -138,10 +134,7 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 		}
 	case 5:
 		if f, ok := v.(lua.LNumber); ok {
-			// Comparing to smallest/max values is causing false errors as the nbt value comes out right even if this comparison doesn't
-			// Instead, will check for positive/negative infinity. Not sure what happens if f is too small for float32, but is likely edge case
-			// if f != 0 && (math.Abs(f) < math.SmallestNonzeroFloat32 || math.Abs(f) > math.MaxFloat32) {
-			if math.IsInf(float64(float32(f)), 0) {
+			if f != 0 && (math.Abs(float64(f)) < math.SmallestNonzeroFloat32 || math.Abs(float64(f)) > math.MaxFloat32) {
 				return LuaNbtError{fmt.Sprintf("%g is out of range for tag 5 - Float", f), nil}
 			}
 			err = binary.Write(w, byteOrder, float32(f))
@@ -149,10 +142,7 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 				return LuaNbtError{"Error writing float32 payload", err}
 			}
 		} else {
-			// TODO: find if lua.LNumber can represent NaN and if it convierts
-			//   If so, this else block may need to throw an error
-			// If NaN is valid for double, maybe it's valid for float?
-			// return LuaNbtError{fmt.Sprintf("Tag 5 Float value field '%v' not a number", v), err}
+			// will write NaN which is needed for true NaN
 			err = binary.Write(w, byteOrder, float32(math.NaN()))
 			if err != nil {
 				return LuaNbtError{"Error writing float64 payload", err}
@@ -165,10 +155,7 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 				return LuaNbtError{"Error writing float64 payload", err}
 			}
 		} else {
-			// TODO: find if lua.LNumber can represent NaN and if it convierts
-			//   If so, this else block may need to throw an error
-			// Apparently NaN is a valid value in Minecraft for double?
-			// return LuaNbtError{fmt.Sprintf("Tag 6 Double value field '%v' not a number", v), err}
+			// will write NaN which is needed for true NaN
 			err = binary.Write(w, byteOrder, math.NaN())
 			if err != nil {
 				return LuaNbtError{"Error writing float64 payload", err}
@@ -241,15 +228,6 @@ func writePayload(w io.Writer, v lua.LValue, tagType lua.LNumber, L *lua.LState)
 				if forEachErr != nil {
 					return forEachErr
 				}
-				/* TODO: I think lua nbt empty tables will work, but check
-				} else if lTable["list"] == nil {
-					// NBT lists can be null / nil and therefore aren't represented as an array in JSON
-					err = binary.Write(w, byteOrder, int32(0))
-					if err != nil {
-						return LuaNbtError{"While writing tag 9 list null size", err}
-					}
-					return nil
-				*/
 			} else {
 				return LuaNbtError{fmt.Sprintf("Tag 9 List's value field '%v' not an array or null", lv), err}
 			}

@@ -126,19 +126,25 @@ func TestLua2Nbt(t *testing.T) {
 		t.Errorf("bedrock signature expected %v, got %v", bedrockSig, s)
 	}
 
-	// // Round trip check
-	// if err := Nbt2Lua(nbtOut, L); err == nil {
-	// 	if nbtOut, err = Lua2Nbt(L); err == nil {
-	// 		s := sha1.Sum(nbtOut)
-	// 		if !bytes.Equal(s[:], bedrockSig) {
-	// 			t.Errorf("bedrock round trip reconversion signature expected %v, got %v", bedrockSig, s)
-	// 		}
-	// 	} else {
-	// 		t.Error("Bedrock round trip reconversion: ", err)
-	// 	}
-	// } else {
-	// 	t.Error("Bedrock sha1 round trip: ", err)
-	// }
+	// Round trip check
+	if err := Nbt2Lua(nbtOut, L); err == nil {
+		if nbtOut, err = Lua2Nbt(L); err == nil {
+			s := sha1.Sum(nbtOut)
+			if !bytes.Equal(s[:], bedrockSig) {
+				t.Errorf("bedrock round trip reconversion signature expected %v, got %v", bedrockSig, s)
+			}
+		} else {
+			t.Error("Bedrock round trip reconversion: ", err)
+		}
+	} else {
+		t.Error("Bedrock sha1 round trip: ", err)
+	}
+
+	// re-run script for fresh start with next tests
+	if err := L.DoFile(luaFile); err != nil {
+		t.Fatal("Error running lua script: ", err)
+	}
+
 	// Java Lua2Nbt sha1 check
 	UseJavaEncoding()
 	nbtOut, err = Lua2Nbt(L)
@@ -148,5 +154,18 @@ func TestLua2Nbt(t *testing.T) {
 	s = sha1.Sum(nbtOut)
 	if !bytes.Equal(s[:], javaSig) {
 		t.Errorf("Java signature expected %v, got %v", javaSig, s)
+	}
+	// Round trip check
+	if err := Nbt2Lua(nbtOut, L); err == nil {
+		if nbtOut, err = Lua2Nbt(L); err == nil {
+			s := sha1.Sum(nbtOut)
+			if !bytes.Equal(s[:], javaSig) {
+				t.Errorf("Java round trip reconversion signature expected %v, got %v", javaSig, s)
+			}
+		} else {
+			t.Error("Java round trip reconversion: ", err)
+		}
+	} else {
+		t.Error("Java sha1 round trip: ", err)
 	}
 }

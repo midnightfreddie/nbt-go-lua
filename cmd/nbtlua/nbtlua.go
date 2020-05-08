@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/hex"
+	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
 
@@ -39,9 +39,28 @@ func luanbt() *lua.LState {
 }
 
 func afterScripts(L *lua.LState) {
+	nlua.UseBedrockEncoding()
 	nbtOut, err := nlua.Lua2Nbt(L)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(hex.Dump(nbtOut))
+	s := sha1.Sum(nbtOut)
+	fmt.Print("Bedrock encoding sha1: ")
+	for i := 0; i < len(s); i++ {
+		fmt.Printf("%d, ", s[i])
+	}
+	fmt.Println()
+
+	nlua.UseJavaEncoding()
+	nbtOut, err = nlua.Lua2Nbt(L)
+	if err != nil {
+		panic(err)
+	}
+	s = sha1.Sum(nbtOut)
+	fmt.Print("Java encoding sha1: ")
+	for i := 0; i < len(s); i++ {
+		fmt.Printf("%d, ", s[i])
+	}
+	fmt.Println()
+	fmt.Println(sha1.Sum(nbtOut))
 }

@@ -1,15 +1,19 @@
 package nlua
 
 import (
+	"bytes"
+	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"math"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	lua "github.com/yuin/gopher-lua"
 )
 
-func TestValueConversions(t *testing.T) {
+func TestNbt2Lua(t *testing.T) {
 
 	numberTags := []struct {
 		tagType lua.LNumber
@@ -70,4 +74,59 @@ func TestValueConversions(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestLua2Nbt(t *testing.T) {
+	L := lua.NewState()
+	var bedrockSig, javaSig []byte
+	// get filename of current file; will use relative path from here for test data input
+	_, filename, _, _ := runtime.Caller(0)
+	luaFile := filepath.Dir(filename) + "/test_data/testnbt.lua"
+	L.DoFile(luaFile)
+
+	// read sha1bedrock sig from lua
+	lv := L.GetGlobal("sha1bedrock")
+	if sig, ok := lv.(*lua.LTable); ok {
+		sig.ForEach(func(_ lua.LValue, v lua.LValue) {
+			if n, ok := v.(lua.LNumber); ok {
+				bedrockSig = append(bedrockSig, byte(n))
+			} else {
+				t.Errorf("sha1bedrock array element expected LNumber, got %v", v)
+			}
+		})
+	} else {
+		t.Errorf("sha1bedrock expected table, got %v", lv)
+	}
+	// read sha1java sig from lua
+	lv = L.GetGlobal("sha1java")
+	if sig, ok := lv.(*lua.LTable); ok {
+		sig.ForEach(func(_ lua.LValue, v lua.LValue) {
+			if n, ok := v.(lua.LNumber); ok {
+				javaSig = append(javaSig, byte(n))
+			} else {
+				t.Errorf("sha1java array element expected LNumber, got %v", v)
+			}
+		})
+	} else {
+		t.Errorf("sha1java expected table, got %v", lv)
+	}
+
+	UseBedrockEncoding()
+	nbtOut, err := Lua2Nbt(L)
+	if err != nil {
+		t.Error("Bedrock conversion: ", err)
+	}
+	s := sha1.Sum(nbtOut)
+	if !bytes.Equal(s[:], bedrockSig) {
+		t.Errorf("bedrock signature expected %v, got %v", bedrockSig, s)
+	}
+}
+
+func TestPrintThis(t *testing.T) {
+	foo := sha1.Sum([]byte("Testlksdvlseflsefvlsfnlsvslslgslsldvnsivnsinvsin"))
+	fmt.Printf("0x%x\n", foo[0:4])
+	fmt.Printf("0x%x\n", foo[4:8])
+	fmt.Printf("0x%x\n", foo[8:12])
+	fmt.Printf("0x%x\n", foo[12:16])
+	fmt.Printf("0x%x\n", foo[16:20])
 }

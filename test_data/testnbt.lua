@@ -1,9 +1,3 @@
--- This script is for whatever I need to test in the moment
-
--- print("Hi from test script")
-
--- print(nbt[1].tagType)
-
 -- overwrite nbt for testing purposes
 nbt = {}
 
@@ -116,3 +110,7 @@ nbt[#nbt+1] = {
 
     },
 }
+
+-- sha1 signatures of the nbt output of the above
+sha1bedrock = ( 116, 110, 134, 107, 34, 229, 46, 1, 116, 206, 74, 130, 62, 200, 45, 242, 228, 223, 207, 130, )
+sha1java = ( 158, 160, 55, 155, 162, 162, 219, 130, 111, 181, 84, 136, 17, 34, 222, 77, 174, 238, 224, 152, )

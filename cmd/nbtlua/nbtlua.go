@@ -10,7 +10,7 @@ import (
 // creates and returns a Lua environment
 func luanbt() *lua.LState {
 
-	// The nbt I'm using is in Java Edition format (big endian), so set that:
+	// We'll default to Java encoding for this executable
 	nlua.UseJavaEncoding()
 
 	// Create gopher-lua environment

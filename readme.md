@@ -11,6 +11,16 @@ to run the script. See `nbtlua -h` for switches. Use `loadnbt(path-to-nbt-file)`
 in scripts to load an nbt file into the `nbt` variable. It will auto-detect
 whether or not the file is compressed with gzip.
 
+## Lua NBT functions
+
+- `use_bedrock_encoding()` - Sets future NBT encoding decoding using the Bedrock
+Edition (little endian) format
+- `use_java_encoding()` - Sets future NBT encoding decoding using the Java
+Edition (little endian) format
+- `loadnbt(path)` - Where `path` is a path to an NBT file, it will auto-detect
+whether it's compressed and populate the `nbt` variable with its data
+- `savenbt(path, compress)` - Not yet implemented, but coming soon!
+
 ## Format of `nbt`
 
 - lua's global `nbt` is a table `{}` in which each top-level nbt tag is

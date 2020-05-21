@@ -81,6 +81,8 @@ func NewState() *lua.LState {
 func Nlua(L *lua.LState) {
 	L.SetGlobal("loadnbt", L.NewFunction(loadNbt))
 	// L.SetGlobal("savenbt", L.NewFunction(loadNbt))
+	L.SetGlobal("use_bedrock_encoding", L.NewFunction(useBedrockEncoding))
+	L.SetGlobal("use_java_encoding", L.NewFunction(useJavaEncoding))
 }
 
 func loadNbt(L *lua.LState) int {
@@ -125,5 +127,17 @@ func loadNbt(L *lua.LState) int {
 func saveNbt(L *lua.LState) int {
 	path := L.ToString(1)
 	fmt.Println(path)
+	return 0
+}
+
+// lua wrapper for UseBedrockEncoding()
+func useBedrockEncoding(L *lua.LState) int {
+	UseBedrockEncoding()
+	return 0
+}
+
+// lua wrapper for UseJavaEncoding()
+func useJavaEncoding(L *lua.LState) int {
+	UseJavaEncoding()
 	return 0
 }

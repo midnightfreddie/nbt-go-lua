@@ -1,15 +1,6 @@
-This repo is a Go module/pakage to make NBT (named binary tags) readable and editable in a Lua script environment.
-
-## Work in progress / status
-
-- The Go module is working and successfully decoding/encoding NBT (named binary
-tags, mostly used in Minecraft) into a Lua 5.1 environment in the global `nbt` variable
-- Lua scripts in examples and test_data can give you an idea of how to access or modify it
-- The cmd/nbtlua executable behaves similarly to the native lua executable. You
-can interactively use lua or provide a lua script file path on the command line
-to run the script. See `nbtlua -h` for switches. Use `loadnbt(path-to-nbt-file)`
-in scripts to load an nbt file into the `nbt` variable. It will auto-detect
-whether or not the file is compressed with gzip.
+This repo contains a Go module/pakage to make NBT (named binary tags) readable
+and editable in a Lua script environment, and a command-line interface similar
+to native lua to run Lua scripts which can load, modify, and write NBT data.
 
 ## Lua NBT functions
 
@@ -19,26 +10,20 @@ Edition (little endian) format
 Edition (little endian) format
 - `loadnbt(path)` - Where `path` is a path to an NBT file, it will auto-detect
 whether it's compressed and populate the `nbt` variable with its data
-- `savenbt(path, compress)` - Not yet implemented, but coming soon!
+- `savenbt(path, compress)` - Converts `nbt` back to NBT and writes to `path`.
+`compress` is `true` for compressed output and ommitted or `false` for
+uncompressed output.
 
-## Format of `nbt`
+## Format of `nbt` variable in Lua
 
 - lua's global `nbt` is a table `{}` in which each top-level nbt tag is
 - in many cases there is only one top-level nbt compound tag, so `nbt[1]` is that tag, and `nbt[1][1]`, `nbt[1][2]`... are the first-tier tags you're looking for. Try `nbt[1][1].name` or the equivalent `nbt[1][1]["name"]`
 - All tags (except tag 0 / end) are added as tables, and they have a `tagType`, `value`, and `name`
 - Compound and list tags' values are again tables of the values beginning with `[1]`
 
-## Vision
+## Lua examples
 
-- The Go code will make the nbt easily accessible from lua
-- Some basic helper funcions will be made available via lua
-- Lua code will read and/or alter the data
-- Go code will write the modified NBT to a file
-- The library will be accessible for other Go projects, like my [MCPE Tool](https://github.com/midnightfreddie/McpeTool)
-- ~~The `"github.com/midnightfreddie/nbt-go-lua"` package will be kept simple and only decode/encode between nbt and lua~~ I've already reversed course on this a bit and included `loadnbt()` (for lua) and will include `savenbt()` with gzip support.
-- Lua scripts and other projects can add more complex features
-- cmd/nbtlua will eventually read (✔️) and write (❌) optionally-compressed nbt files and handle the file reads & writes
-- Will try to have a 'friendly' option where the tag name is the table key which could enable e.g. `print( nbt[1].Inventory[1].Count.value )`
+See /examples folder for example lua scripts.
 
 ## Go code example
 

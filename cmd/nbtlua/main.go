@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/chzyer/readline"
+	nlua "github.com/midnightfreddie/nbt-go-lua"
 	lua "github.com/yuin/gopher-lua"
 	"github.com/yuin/gopher-lua/parse"
 )
@@ -39,10 +40,16 @@ Available options are:
 
 	status := 0
 
-	L := luanbt()
+	// We'll default to Java encoding for this executable
+	nlua.UseJavaEncoding()
+
+	// Create gopher-lua environment
+	L := nlua.NewState()
 	defer L.Close()
 
 	if opt_v || opt_i {
+		fmt.Println("nbtlua early release Copyright (C) 2020 Jim Nelson")
+		fmt.Println("  based on")
 		fmt.Println(lua.PackageCopyRight)
 	}
 
@@ -73,6 +80,11 @@ Available options are:
 	}
 
 	if opt_i {
+		fmt.Println("\nWARNING! Early release! Back up all files before modifying!")
+		fmt.Print("Load an NBT file with loadnbt(path-to-nbt). ")
+		fmt.Print(`Try print(nbt[1].name) or tagType or value. Try changing the name or value. `)
+		fmt.Print("Save an NBT file with savenbt(path-to-modified-nbt, true), where the second parameter is whether to compress the output or not. ")
+		fmt.Println("Press control-D to exit. ")
 		doREPL(L)
 	}
 

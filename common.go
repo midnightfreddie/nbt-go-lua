@@ -3,6 +3,7 @@ package nlua
 import (
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -76,5 +77,28 @@ func NewState() *lua.LState {
 
 // Nlua injects load and save functions into a lua environment
 func Nlua(L *lua.LState) {
+	L.SetGlobal("loadfile", L.NewFunction(loadFile))
+	// L.SetGlobal("savefile", L.NewFunction(loadFile))
+}
 
+func loadFile(L *lua.LState) int {
+	path := L.ToString(1)
+	inData, err := ioutil.ReadFile(path)
+	if err != nil {
+		// TODO: proper error handling inside lua?
+		fmt.Println("Error reading file:", err)
+	}
+	err = Nbt2Lua(inData, L)
+	if err != nil {
+		// TODO: proper error handling inside lua?
+		fmt.Println("Error converting file:", err)
+	}
+	return 0
+}
+
+// stub
+func saveFile(L *lua.LState) int {
+	path := L.ToString(1)
+	fmt.Println(path)
+	return 0
 }

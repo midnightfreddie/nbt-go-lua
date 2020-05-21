@@ -169,3 +169,15 @@ func TestLua2Nbt(t *testing.T) {
 		t.Error("Java sha1 round trip: ", err)
 	}
 }
+
+func TestDevChecks(t *testing.T) {
+	L := NewState()
+	defer L.Close()
+	// get filename of current file; will use relative path from here for test data input
+	_, filename, _, _ := runtime.Caller(0)
+	luaFile := filepath.Dir(filename) + "/test_data/devchecks.lua"
+	if err := L.DoFile(luaFile); err != nil {
+		t.Fatal("Error running lua script: ", err)
+	}
+
+}

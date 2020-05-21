@@ -35,7 +35,7 @@ func TestNbt2Lua(t *testing.T) {
 	}
 
 	UseBedrockEncoding()
-	L := lua.NewState()
+	L := NewState()
 	defer L.Close()
 	for _, tag := range numberTags {
 		err := Nbt2Lua(tag.nbt, L)
@@ -78,7 +78,7 @@ func TestNbt2Lua(t *testing.T) {
 }
 
 func TestLua2Nbt(t *testing.T) {
-	L := lua.NewState()
+	L := NewState()
 	defer L.Close()
 	var bedrockSig, javaSig []byte
 	// get filename of current file; will use relative path from here for test data input

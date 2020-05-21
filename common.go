@@ -3,7 +3,12 @@ package nlua
 import (
 	"encoding/binary"
 	"fmt"
+
+	lua "github.com/yuin/gopher-lua"
 )
+
+// NewState is called to get a Lua environment with nbt manipulation ability// lua vm memory limit; 0 is no limit
+const memoryLimitMb = 100
 
 // Used by all converters; change with UseJavaEncoding() or UseBedrockEncoding()
 var byteOrder = binary.ByteOrder(binary.LittleEndian)
@@ -57,4 +62,19 @@ func (e LuaNbtError) Error() string {
 		s = fmt.Sprintf(": %s", e.e.Error())
 	}
 	return fmt.Sprintf("Error lua nbt to native nbt: %s%s", e.s, s)
+}
+
+func NewState() *lua.LState {
+	L := lua.NewState()
+	// Set memory limit of lua instance (just a safety measure)
+	if memoryLimitMb > 0 {
+		L.SetMx(memoryLimitMb)
+	}
+	Nlua(L)
+	return L
+}
+
+// Nlua injects load and save functions into a lua environment
+func Nlua(L *lua.LState) {
+
 }

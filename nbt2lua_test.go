@@ -170,6 +170,8 @@ func TestLua2Nbt(t *testing.T) {
 	}
 }
 
+/*
+// The script run often uses specific files from my computer
 func TestDevChecks(t *testing.T) {
 	L := NewState()
 	defer L.Close()
@@ -181,3 +183,4 @@ func TestDevChecks(t *testing.T) {
 	}
 
 }
+*/

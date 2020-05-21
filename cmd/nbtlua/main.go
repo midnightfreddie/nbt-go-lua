@@ -76,8 +76,6 @@ Available options are:
 		doREPL(L)
 	}
 
-	afterScripts(L)
-
 	return status
 }
 

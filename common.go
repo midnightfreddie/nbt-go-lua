@@ -1,6 +1,8 @@
 package nlua
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
@@ -77,27 +79,50 @@ func NewState() *lua.LState {
 
 // Nlua injects load and save functions into a lua environment
 func Nlua(L *lua.LState) {
-	L.SetGlobal("loadfile", L.NewFunction(loadFile))
-	// L.SetGlobal("savefile", L.NewFunction(loadFile))
+	L.SetGlobal("loadnbt", L.NewFunction(loadNbt))
+	// L.SetGlobal("savenbt", L.NewFunction(loadNbt))
 }
 
-func loadFile(L *lua.LState) int {
+func loadNbt(L *lua.LState) int {
+	var inData []byte
+	var err error
 	path := L.ToString(1)
-	inData, err := ioutil.ReadFile(path)
+	inData, err = ioutil.ReadFile(path)
 	if err != nil {
 		// TODO: proper error handling inside lua?
 		fmt.Println("Error reading file:", err)
+		return 0
 	}
+	// is it gzipped?
+	if (inData[0] == 0x1f) && (inData[1] == 0x8b) {
+		var uncompressed []byte
+		buf := bytes.NewReader(inData)
+		zr, err := gzip.NewReader(buf)
+		if err != nil {
+			// TODO: proper error handling inside lua?
+			fmt.Println("Error creating gzip reader on buf:", err)
+			return 0
+		}
+		uncompressed, err = ioutil.ReadAll(zr)
+		if err != nil {
+			// TODO: proper error handling inside lua?
+			fmt.Println("Error un-gzipping file:", err)
+			return 0
+		}
+		inData = uncompressed
+	}
+
 	err = Nbt2Lua(inData, L)
 	if err != nil {
 		// TODO: proper error handling inside lua?
 		fmt.Println("Error converting file:", err)
+		return 0
 	}
 	return 0
 }
 
 // stub
-func saveFile(L *lua.LState) int {
+func saveNbt(L *lua.LState) int {
 	path := L.ToString(1)
 	fmt.Println(path)
 	return 0

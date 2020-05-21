@@ -80,7 +80,7 @@ func NewState() *lua.LState {
 // Nlua injects load and save functions into a lua environment
 func Nlua(L *lua.LState) {
 	L.SetGlobal("loadnbt", L.NewFunction(loadNbt))
-	// L.SetGlobal("savenbt", L.NewFunction(loadNbt))
+	L.SetGlobal("savenbt", L.NewFunction(saveNbt))
 	L.SetGlobal("use_bedrock_encoding", L.NewFunction(useBedrockEncoding))
 	L.SetGlobal("use_java_encoding", L.NewFunction(useJavaEncoding))
 }
@@ -126,7 +126,36 @@ func loadNbt(L *lua.LState) int {
 // stub
 func saveNbt(L *lua.LState) int {
 	path := L.ToString(1)
-	fmt.Println(path)
+	compress := L.ToBool(2)
+	outData, err := Lua2Nbt(L)
+	if err != nil {
+		// TODO: proper error handling inside lua?
+		fmt.Println("Error converting lua to nbt:", err)
+		return 0
+	}
+	if compress {
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+		_, err := zw.Write(outData)
+		if err != nil {
+			// TODO: proper error handling inside lua?
+			fmt.Println("Error creating gzip writer on buf:", err)
+			return 0
+		}
+		err = zw.Close()
+		if err != nil {
+			// TODO: proper error handling inside lua?
+			fmt.Println("Error gzipping file:", err)
+			return 0
+		}
+		outData = buf.Bytes()
+	}
+	err = ioutil.WriteFile(path, outData, 0644)
+	if err != nil {
+		// TODO: proper error handling inside lua?
+		fmt.Println("Error writing file:", err)
+		return 0
+	}
 	return 0
 }
 
